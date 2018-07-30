@@ -62,7 +62,8 @@ cd ./data/raw/ukbb/
 # Download other helper files
 
 ```{bash}
-cd ./data/raw/ukbb
+mkdir -p ./data/raw/ukbb/helperfiles
+cd ./data/raw/ukbb/helperfiles
 wget -nd -O field.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=1"
 wget -nd -O encoding.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=2"
 wget -nd -O instances.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=9"
@@ -81,4 +82,46 @@ wget -nd -O esimpstring.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&i
 
 # Download data coding files
 
-Some of the fields in data are encoded. The coding files include definitions. These are downloaded from the webpage instead of using wget simply because there is no link to the files but downloading only works by clicking on download button on the webpages. The relevant coding id is retrieved from ./data/raw/ukbb/encoding.txt and files are saved under ./data/raw/ukbb/datacoding
+Some of the fields in data are encoded. The coding files include definitions. These are downloaded from the webpage instead of using wget simply because there is no link to the files but downloading only works by clicking on download button on the webpages. The relevant coding id is retrieved from ./data/raw/ukbb/helperfiles/encoding.txt and files are saved under ./data/raw/ukbb/datacoding
+
+
+# Download fam files
+
+```{bash}
+mkdir -p data/raw/ukbb/fam
+cd ./data/raw/ukbb/fam
+echo 30688 | cat - ../k3068.key > .ukbkey
+for i in {1..22}
+do
+  ../helpers/ukbgene cal -c$i -m
+done
+```
+
+# Download sample files
+
+```{bash}
+mkdir -p data/raw/ukbb/sample
+cd ./data/raw/ukbb/sample
+echo 30688 | cat - ../k3068.key > .ukbkey
+for i in {1..22}
+do
+  ../helpers/ukbgene imp -c$i -m
+done
+```
+
+# Downloaad relatedness
+
+```{bash}
+mkdir -p data/raw/ukbb/rel
+cd ./data/raw/ukbb/rel
+echo 30688 | cat - ../k3068.key > .ukbkey
+../helpers/ukbgene rel
+```
+
+# Download resources
+
+```{bash}
+cd ./data/raw/ukbb/
+wget "http://biobank.ndph.ox.ac.uk/showcase/auxdata/ukb_snp_qc.txt"
+```
+
