@@ -56,12 +56,6 @@ mykey=$(head -1  k3068.key )
 
 ```{bash}
 cd ./data/raw/ukbb/
-./helpers/ukbconv ukb10904.enc_ukb r
-```
-
-Move the generated .r file under scripts.
-
-```{bash}
-mv ./data/raw/ukbb/ukb10904.r ./scripts/02-tidyData.R
+./helpers/ukbconv ukb10904.enc_ukb csv
 ```
 
