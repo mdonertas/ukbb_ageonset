@@ -1,0 +1,67 @@
+---
+title: "Download and Prepare UKBB data for the Analysis"
+author: "melike"
+date: "30 July 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=T, message=F, warning=F, tidy=TRUE, tidy.opts=list(width.cutoff=55))
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+# Create the necesarry folders
+
+```{bash}
+mkdir -p data/raw/ukbb
+```
+
+# Download ukb10904.enc file
+
+This file contains the encoded data. To download, we need to go to application specific data showcase, downloads section on UK Biobank website and download the file after entering the md5 checksum sent us through e-mail. This file is downloaded and saved under './data/raw/ukbb/ukb10904.enc'
+
+We also need the key file sent through e-mail. That also saved as './data/raw/ukbb/k3068.key'
+
+# Download helper programs
+
+```{bash}
+mkdir data/raw/ukbb/helpers
+cd data/raw/ukbb/helpers
+wget  -nd  "biobank.ndph.ox.ac.uk/showcase/util/ukbmd5"
+wget  -nd  "biobank.ndph.ox.ac.uk/showcase/util/ukbunpack"
+wget  -nd  "biobank.ndph.ox.ac.uk/showcase/util/ukbconv"
+wget  -nd  "biobank.ndph.ox.ac.uk/showcase/util/ukbgene"
+wget  -nd  "biobank.ndph.ox.ac.uk/showcase/util/encoding.ukb"
+```
+
+# Decrypting the file
+
+## Verify the integrity of file through md5 
+
+This command should give the same md5 checksum we used to download the data.
+
+```{bash}
+./data/raw/ukbb/helpers/ukbmd5 ./data/raw/ukbb/ukb10904.enc
+```
+
+It is the same, so we can continue.
+
+## Decompress file
+
+```{bash}
+cd ./data/raw/ukbb/
+mykey=$(head -1  k3068.key )
+./helpers/ukbunpack ukb10904.enc $mykey
+```
+
+```{bash}
+cd ./data/raw/ukbb/
+./helpers/ukbconv ukb10904.enc_ukb r
+```
+
+Move the generated .r file under scripts.
+
+```{bash}
+mv ./data/raw/ukbb/ukb10904.r ./scripts/02-tidyData.R
+```
+
