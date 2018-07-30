@@ -59,3 +59,26 @@ cd ./data/raw/ukbb/
 ./helpers/ukbconv ukb10904.enc_ukb csv
 ```
 
+# Download other helper files
+
+```{bash}
+cd ./data/raw/ukbb
+wget -nd -O field.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=1"
+wget -nd -O encoding.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=2"
+wget -nd -O instances.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=9"
+wget -nd -O archive.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=4"
+wget -nd -O category.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=3"
+wget -nd -O catbrowse.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=13"
+wget -nd -O schema.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=999"
+wget -nd -O ehierint.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=11"
+wget -nd -O ehierstring.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=12"
+wget -nd -O insvalue.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=10"
+wget -nd -O esimpdate.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=8"
+wget -nd -O esimpint.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=5"
+wget -nd -O esimpreal.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=7"
+wget -nd -O esimpstring.txt "biobank.ndph.ox.ac.uk/showcase/scdown.cgi?fmt=txt&id=6"
+```
+
+# Download data coding files
+
+Some of the fields in data are encoded. The coding files include definitions. These are downloaded from the webpage instead of using wget simply because there is no link to the files but downloading only works by clicking on download button on the webpages. The relevant coding id is retrieved from ./data/raw/ukbb/encoding.txt and files are saved under ./data/raw/ukbb/datacoding
