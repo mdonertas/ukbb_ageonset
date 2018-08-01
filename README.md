@@ -31,3 +31,4 @@ What is the link between ageing and ageing-related diseases (ARDs)?
 ## Data
 
 1. UK Biobank
+    * Sample QC: Explained in LOG.md (01.08.2018 - Sample QC)
