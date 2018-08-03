@@ -1,4 +1,4 @@
-#LOG
+# LOG
 
 ## 30.07.2018
 
@@ -46,7 +46,29 @@ For the exclusions based on missingness and heterozygosity we only used the sugg
 Before exclusion we checked the overlap across these categories since they are all related to missingness & heterozygosity, and this file is saved as './results/SampleQC/Overlap_ExcCat.pdf'. Overall, we saw the exclusion suggestions based on these criteria do not overlap. We then checked the scatter plots for logit(Missingness) vs. Heterozygosity for each Ethnic Background, in accordance with the identification of samples to exclude by the UK Biobank [2]. This plot is saved as
 './results/SampleQC/Het_Miss_Plots.pdf'. We confirmed these are in accordance with the article and we excluded the samples suggested by these fields, in total 2849 unique samples. Resulting in 484,666 samples. 2849 sample ids excluded by these criteria are saved as './data/processed/ukbb/sampleQC/recommended_exclusions.tsv'.
 
+## 03.08.2018
+
+### Prepare trait data for EDA
+
+Processed using ./scripts/03-prepTraitData.R
+
+Only values entered for the baseline visit are considered. Samples failing the initial QC are eliminated from the analysis.
+
+#### Traits in UKBB
+
+A file containing the following variables (only baseline measurements) are saved as './data/processed/traits_clean/traitData_baseline.tsv':
+'eid', 'Sex', 'Age at recruitment', 'Age when attended assessment centre', 'Age at death', 'Standing height', 'Weight', 'Number of self-reported cancers', 'Number of self-reported non-cancer illnesses', 'Number of operations, self-reported', 'Number of treatments/medications taken', 'Sleep duration', 'Facial ageing', 'Maternal smoking around birth', 'Smoking status', 'Alcohol drinker status', "Father's age at death", "Mother's age at death", 'Overall health rating', 'Health satisfaction', 'Age when periods started (menarche)', 'Age at menopause (last menstrual period)', 'Non-accidental death in close genetic family'
+
+#### Self Reported Non-Cancer Illnesses and Age of Diagnosis:
+
+A file containing 'eid', 'diseaseID', 'Disease', 'node_id', 'parent_id', 'selectable', 'Age' is saved under './data/processed/traits_clean/SRdisease_baseline.tsv'.
+
+#### Self Reported Cancers and Age of Diagnosis:
+
+A file containing 'eid', 'cancerID', 'Cancer', 'node_id', 'parent_id', 'selectable', 'Age' is saved under './data/processed/traits_clean/SRcancer_baseline.tsv'.
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
+
 [2] Bycroft, C., Freeman, C., Petkova, D., Band, G., Elliott, L. T., Sharp, K., … Marchini, J. (2017). Genome-wide genetic data on ~500,000 UK Biobank participants. BioRxiv, https://doi.org/10.1101/166298. https://doi.org/10.1101/166298
