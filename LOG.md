@@ -67,6 +67,12 @@ A file containing 'eid', 'diseaseID', 'Disease', 'node_id', 'parent_id', 'select
 
 A file containing 'eid', 'cancerID', 'Cancer', 'node_id', 'parent_id', 'selectable', 'Age' is saved under './data/processed/traits_clean/SRcancer_baseline.tsv'.
 
+## 06.08.2018
+
+### Exploratory Data Analysis on UKBB Data
+
+Done using ./scripts/04-UKBB_EDA.Rmd
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116

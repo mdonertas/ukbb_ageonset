@@ -1,0 +1,353 @@
+---
+title: "UKBB EDA"
+author: "melike"
+date: "6 Aug 2018"
+output: html_document
+---
+
+# SETUP
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=T, message=F, warning=F, tidy=TRUE, tidy.opts=list(width.cutoff=55))
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+```{r}
+library(tidyverse)
+library(RFRlib)
+library(ggthemes)
+library(viridis)
+```
+
+
+Load data:
+
+```{r}
+traits <- readRDS('./data/processed/traits_clean/traitData_baseline.rds') %>%
+  mutate(Sex = c('Female','Male')[Sex+1])%>%
+  mutate(BMI = Weight/((`Standing height`/100)^2))
+traits[traits==-1 | traits ==-3] <- NA
+
+traits$`Parent Min Age at Death` <- traits %>%
+  select(`Mother's age at death`, `Father's age at death`) %>%
+  apply(.,1,function(x){
+    xx=min(x[!is.na(x)])
+    ifelse(xx==Inf,NA,xx)
+  })
+traits$`Parent Max Age at Death` <- traits %>%
+  select(`Mother's age at death`, `Father's age at death`) %>%
+  apply(.,1,function(x){
+    xx=max(x[!is.na(x)])
+    ifelse(xx==-Inf,NA,xx)
+  })
+traits$`Parent Avg Age at Death` <- traits %>%
+  select(`Mother's age at death`, `Father's age at death`) %>%
+  apply(.,1,function(x){
+    xx=mean(x[!is.na(x)])
+    ifelse(is.nan(xx),NA,xx)
+  })
+SRdisease <- readRDS('./data/processed/traits_clean/SRdisease_baseline.rds')
+traits <- SRdisease%>%
+  group_by(eid)%>%
+  summarise(Healthspan=min(Age),
+            Healthspan_a20=min(Age[Age>=20]))%>%
+  right_join(traits)
+traits$Healthspan_a20[traits$Healthspan_a20==Inf]=NA
+traits <- SRdisease%>%
+  group_by(eid)%>%
+  summarise(nSRdisease=length(unique(Disease)))%>%
+  right_join(traits)
+SRcancer <- readRDS('./data/processed/traits_clean/SRcancer_baseline.rds')
+traits <- SRcancer%>%
+  group_by(eid)%>%
+  summarise(nSRcancer=length(unique(Cancer)))%>%
+  right_join(traits)
+```
+
+Colors: 
+
+```{r}
+sexcolors <- setNames(c('lavenderblush3', 'lightgoldenrodyellow'), c('Female', 'Male'))
+```
+
+# Sex
+
+```{r}
+traits %>%
+  group_by(Sex) %>%
+  summarise(n = length(unique(eid)))%>%
+  ggplot(aes(x = Sex, y = n)) +
+  geom_bar(stat = 'identity', aes(fill = Sex)) + 
+  geom_label(aes(label = n)) +
+  theme_rfr() + 
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  ylab('Number of participants') + 
+  xlab('') +
+  scale_y_continuous(labels = scales::comma)+
+  guides(fill = F)
+system('mkdir -p results/UKBB_EDA')
+ggsave('./results/UKBB_EDA/sex.pdf', useDingbats=F, height = 4,width = 3)
+```
+
+# Age when attended assessment centre
+
+```{r}
+traits %>%
+  select(`Age at recruitment`, `Age when attended assessment centre`) %>%
+  filter( `Age when attended assessment centre` != `Age at recruitment`)
+```
+
+Since all data is collected when people attended the assessment centre, we prefer to use age when attended assesment centre, instead of 'age at recruitment'
+
+```{r}
+traits %>%
+  select(`Age when attended assessment centre`, Sex) %>%
+  ggplot(aes(x = `Age when attended assessment centre`, fill = Sex)) +
+  facet_wrap(~Sex) + 
+  geom_histogram(binwidth = 2, color = 'gray25') +
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma)
+ggsave('./results/UKBB_EDA/baselineAge_bySex.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+```{r}
+traits %>%
+  select(`Age when attended assessment centre`) %>%
+  ggplot(aes(x = `Age when attended assessment centre`)) +
+  geom_histogram(binwidth = 2, color = 'gray60') +
+  theme_rfr() +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma)
+ggsave('./results/UKBB_EDA/baselineAge.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+# Age at death
+
+```{r}
+annotdf <- traits %>%
+  select(`Age at death`, Sex) %>%
+  na.omit() %>%
+  group_by(Sex) %>%
+  summarise(n = n())
+traits %>%
+  select(`Age at death`, Sex) %>%
+  ggplot(aes(x = `Age at death`)) +
+  facet_wrap(~Sex) + 
+  geom_histogram(binwidth = 2, color = 'gray25', aes(fill = Sex)) +
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  geom_label(data = annotdf, x = 40, y= 1200, aes( label = paste('N=',n,sep='')), hjust = 0) +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/Age_at_death_bySex.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+```{r}
+annotdf <- traits %>%
+  select(`Age at death`) %>%
+  na.omit() %>%
+  summarise(n = n())
+traits %>%
+  select(`Age at death`) %>%
+  ggplot(aes(x = `Age at death`)) +
+  geom_histogram(binwidth = 2, color = 'gray60') +
+  geom_label(data = annotdf, x = 40, y= 1800, aes( label = paste('N=',n,sep='')), hjust = 0) +
+  theme_rfr() +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/Age_at_death.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+# Parents' Age at Death
+
+```{r}
+annotdf <- traits %>%
+  select(`Parent Min Age at Death`) %>%
+  na.omit() %>%
+  summarise(n = n())
+traits %>%
+  select(`Parent Min Age at Death`) %>%
+  ggplot(aes(x = `Parent Min Age at Death`)) +
+  geom_histogram(binwidth = 2, color = 'gray60') +
+  geom_label(data = annotdf, x = 10, y= 28000, aes( label = paste('N=',n,sep='')), hjust = 0) +
+  theme_rfr() +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/Parent_minAge_at_death.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+
+```{r}
+annotdf <- traits %>%
+  select(`Parent Max Age at Death`) %>%
+  na.omit() %>%
+  summarise(n = n())
+traits %>%
+  select(`Parent Max Age at Death`) %>%
+  ggplot(aes(x = `Parent Max Age at Death`)) +
+  geom_histogram(binwidth = 2, color = 'gray60') +
+  geom_label(data = annotdf, x = 10, y= 28000, aes( label = paste('N=',n,sep='')), hjust = 0) +
+  theme_rfr() +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/Parent_maxAge_at_death.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+```{r}
+annotdf <- traits %>%
+  select(`Parent Avg Age at Death`) %>%
+  na.omit() %>%
+  summarise(n = n())
+traits %>%
+  select(`Parent Avg Age at Death`) %>%
+  ggplot(aes(x = `Parent Avg Age at Death`)) +
+  geom_histogram(binwidth = 2, color = 'gray60') +
+  geom_label(data = annotdf, x = 10, y= 28000, aes( label = paste('N=',n,sep='')), hjust = 0) +
+  theme_rfr() +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/Parent_avgAge_at_death.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+# Number of Diseases
+
+```{r}
+traits %>%
+  select(`Number of self-reported non-cancer illnesses`,nSRdisease) %>%
+  na.omit() %>%
+  filter( `Number of self-reported non-cancer illnesses` != nSRdisease)
+```
+
+We will use the number of diseases we extracted from self reported non-cancer disease column.
+
+```{r}
+traits %>%
+  select(nSRdisease, Sex) %>%
+  ggplot(aes(x = nSRdisease)) +
+  facet_wrap(~Sex) + 
+  geom_histogram(binwidth = 1, color = 'gray25', aes(fill = Sex)) +
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/nSRdisease_bySex.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+```{r}
+traits %>%
+  select(nSRdisease) %>%
+  ggplot(aes(x = nSRdisease)) +
+  geom_histogram(binwidth = 1, color = 'gray60') +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/nSRdisease.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+# Healthspan
+
+```{r}
+traits %>%
+  select(Healthspan, Sex) %>%
+  ggplot(aes(x = Healthspan)) +
+  facet_wrap(~Sex) + 
+  geom_histogram(binwidth = 2, color = 'gray25', aes(fill = Sex)) +
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/healthspan_bySex.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+```{r}
+traits %>%
+  select(Healthspan_a20, Sex) %>%
+  ggplot(aes(x = Healthspan_a20)) +
+  facet_wrap(~Sex) + 
+  geom_histogram(binwidth = 2, color = 'gray25', aes(fill = Sex)) +
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/healthspan_a20_bySex.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+# Number of medications
+
+```{r}
+traits %>%
+  select(`Number of treatments/medications taken`, Sex) %>%
+  ggplot(aes(x = `Number of treatments/medications taken`)) +
+  facet_wrap(~Sex) + 
+  geom_histogram(binwidth = 1, color = 'gray25', aes(fill = Sex)) +
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/nSRmedications_bySex.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+# Number of operations
+
+```{r}
+traits %>%
+  select(`Number of operations, self-reported`, Sex) %>%
+  ggplot(aes(x = `Number of operations, self-reported`)) +
+  facet_wrap(~Sex) + 
+  geom_histogram(binwidth = 1, color = 'gray25', aes(fill = Sex)) +
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/nSRoperations_bySex.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+# Number of Cancerrs
+
+```{r}
+traits %>%
+  select(`Number of self-reported cancers` ,nSRcancer) %>%
+  na.omit() %>%
+  filter( `Number of self-reported cancers` != nSRcancer)
+```
+
+We will use the number of cancerrrs we extracted from self reported cancer column.
+
+```{r}
+traits %>%
+  select(nSRcancer, Sex) %>%
+  ggplot(aes(x = nSRcancer)) +
+  facet_wrap(~Sex) + 
+  geom_histogram(binwidth = 1, color = 'gray25', aes(fill = Sex)) +
+  scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
+  theme_rfr() +
+  guides(fill = F) +
+  ylab('Number of participants') +
+  scale_y_continuous(labels = scales::comma) 
+ggsave('./results/UKBB_EDA/nSRcancer_bySex.pdf', useDingbats=F, height = 4,width = 6)
+```
+
+# Correlations across data fields
+
+```{r}
+cotraits <- traits[,c(2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 16, 17, 19, 21, 22,
+                      23, 25, 27, 28, 29, 30, 31)] %>%
+  mutate(Sex=as.numeric(as.factor(Sex)))
+cox=cor(cotraits,use='pairwise')
+pheatmap::pheatmap(cox, cellwidth = 25, cellheight = 25, display_numbers = T, 
+                   breaks = seq(-1,1,length.out = 10),
+                   color = colorRampPalette(c('#2166AC','gray90','#B2182B'))(9),
+                   number_format = '%.2f', 
+                   filename = './results/UKBB_EDA/correlations.pdf')
+```
+
