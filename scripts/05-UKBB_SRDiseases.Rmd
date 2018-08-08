@@ -26,35 +26,12 @@ library(intergraph)
 Load data:
 
 ```{r}
-traits <- readRDS('./data/processed/traits_clean/traitData_baseline.rds') %>%
+traits <- readRDS('./data/processed/traits_clean/traitData_baseline.rds')
+traits <- traits %>%
   mutate(Sex = c('Female','Male')[Sex+1])%>%
   mutate(BMI = Weight/((`Standing height`/100)^2))
 traits[traits==-1 | traits ==-3] <- NA
-traits$`Parent Min Age at Death` <- traits %>%
-  select(`Mother's age at death`, `Father's age at death`) %>%
-  apply(.,1,function(x){
-    xx=min(x[!is.na(x)])
-    ifelse(xx==Inf,NA,xx)
-  })
-traits$`Parent Max Age at Death` <- traits %>%
-  select(`Mother's age at death`, `Father's age at death`) %>%
-  apply(.,1,function(x){
-    xx=max(x[!is.na(x)])
-    ifelse(xx==-Inf,NA,xx)
-  })
-traits$`Parent Avg Age at Death` <- traits %>%
-  select(`Mother's age at death`, `Father's age at death`) %>%
-  apply(.,1,function(x){
-    xx=mean(x[!is.na(x)])
-    ifelse(is.nan(xx),NA,xx)
-  })
 SRdisease <- readRDS('./data/processed/traits_clean/SRdisease_baseline.rds')
-traits <- SRdisease%>%
-  group_by(eid)%>%
-  summarise(Healthspan=min(Age),
-            Healthspan_a20=min(Age[Age>=20]))%>%
-  right_join(traits)
-traits$Healthspan_a20[traits$Healthspan_a20==Inf]=NA
 traits <- SRdisease%>%
   group_by(eid)%>%
   summarise(nSRdisease=length(unique(Disease)))%>%
@@ -72,7 +49,63 @@ Colors:
 sexcolors <- setNames(c('lavenderblush3', 'lightgoldenrodyellow'), c('Female', 'Male'))
 ```
 
-#
+
+## Update SR Disease information to consider hieerarchy across diseases
+
+```{r}
+SRdisease$Age[SRdisease$Age %in% c(-1,-3)]=NA
+disCoding <- read_tsv('./data/raw/ukbb/datacoding/coding6.tsv')
+disTree <- graph_from_data_frame(select(disCoding,parent_id,node_id),directed = T)
+igraph_options(plot.layout=layout_as_tree)
+```
+
+```{r,fig.width=20}
+pdf('./results/UKBB_disease_EDA/disTree.pdf',width=20,height = 5)
+plot(disTree,
+     vertex.size=0.75,
+     vertex.frame.color=NA,
+     vertex.label=NA,
+     asp=0.1,
+     edge.arrow.size=0.2,
+     edge.color='gray80',
+     vertex.color=c('gray70'))
+dev.off()
+plot(disTree,
+     vertex.size=0.75,
+     vertex.frame.color=NA,
+     vertex.label=NA,
+     asp=0.1,
+     edge.arrow.size=0.2,
+     edge.color='gray80',
+     vertex.color=c('gray70'))
+```
+
+```{r,eval=F}
+disDat <- lapply(setdiff(V(disTree)$name,'0'),function(nodex){
+  print(nodex)
+  childs <- subcomponent(disTree,v=nodex,mode='out')$name
+  nodeinfo <- filter(disCoding,node_id==nodex)
+  nodedat <- SRdisease %>%
+    filter(node_id %in% childs) %>%
+    group_by(eid) %>%
+    summarise(diseaseID=nodeinfo$coding,
+              Disease=nodeinfo$meaning,
+              node_id=nodex,
+              parent_id=nodeinfo$parent_id,
+              selectable=nodeinfo$selectable,
+              Age=min(Age,na.rm=T))
+  nodedat$Age[nodedat$Age==Inf]=NA
+  return(nodedat)
+})
+SRdisease <- reshape2::melt(disDat,id.vars=colnames(disDat[[1]]))%>%
+  select(-L1)
+saveRDS(SRdisease,'./data/processed/traits_clean/SRdisease_baseline_propagated.rds')
+```
+
+```{r}
+SRdisease <- readRDS('./data/processed/traits_clean/SRdisease_baseline_propagated.rds')
+```
+
 
 ```{r}
 prevDF <- SRdisease %>%
@@ -87,8 +120,32 @@ prevDF <- SRdisease %>%
          nCases=sum(Female,Male,na.rm=T)) %>%
   mutate(fCase=nCases/(262801+221865))
 disSet <- prevDF %>%
-  filter(nCases>=2000 & fPrev>=0.001 & mPrev>=0.001)
+  filter(nCases>=2000 & fPrev>=0.001 & mPrev>=0.001)%>%
+  filter(Disease!='unclassifiable')
 ```
+
+```{r,fig.width=20}
+selectedNodes <- filter(disCoding,meaning%in%disSet$Disease)$node_id
+pdf('./results/UKBB_disease_EDA/disTree_selected.pdf',width=20,height = 5)
+plot(disTree,
+     vertex.size=c(0.75,0.75)[1+(V(disTree)$name%in%selectedNodes)],
+     vertex.frame.color=NA,
+     vertex.label=NA,
+     asp=0.1,
+     edge.arrow.size=0.2,
+     edge.color='gray80',
+     vertex.color=c('gray70','gray25')[1+(V(disTree)$name%in%selectedNodes)])
+dev.off()
+plot(disTree,
+     vertex.size=c(0.75,0.75)[1+(V(disTree)$name%in%selectedNodes)],
+     vertex.frame.color=NA,
+     vertex.label=NA,
+     asp=0.1,
+     edge.arrow.size=0.2,
+     edge.color='gray80',
+     vertex.color=c('gray70','gray25')[1+(V(disTree)$name%in%selectedNodes)])
+```
+
 
 ```{r}
 prevDF %>%
@@ -101,8 +158,8 @@ prevDF %>%
   ylab('Frequency')+
   xlab('Number of Cases (log scale)')+
   annotate('text',x=2100,y=35,label='2000 cases', hjust=0, color='orange') +
-  annotate('label',x=1900,y=47,label='N=372', hjust=1) +
-  annotate('label',x=2100,y=47,label='N=72', hjust=0)
+  annotate('label',x=1900,y=47,label='N=343', hjust=1) +
+  annotate('label',x=2100,y=47,label='N=129', hjust=0)
 # system('mkdir -p results/UKBB_disease_EDA')
 ggsave('./results/UKBB_disease_EDA/nCase_dist.pdf', useDingbats=F, height=4)
 ```
@@ -125,7 +182,7 @@ ggsave('./results/UKBB_disease_EDA/sexPrev.pdf', useDingbats= F, height=4,width=
 ```
 
 
-```{r,fig.height=10}
+```{r,fig.height=15}
 disSet %>%
   mutate(FemMinMale=(fPrev-mPrev)*1000,
          Male=mPrev*1000,
@@ -140,7 +197,7 @@ disSet %>%
   ylab('Number of Cases in 1,000')+
   scale_y_continuous(breaks=c(-300,-200,-100,0,100,200,300),
                      labels=c(300,200,100,0,100,200,300))
-ggsave('./results/UKBB_disease_EDA/nCases_sex.pdf', useDingbats=F, height=12, width = 10)
+ggsave('./results/UKBB_disease_EDA/nCases_sex.pdf', useDingbats=F, height=16, width = 10)
 ```
 
 ```{r,fig.height=10}
@@ -150,7 +207,7 @@ disSet %>%
   geom_bar(stat='identity')+
   theme_rfr(x.text.angle = 90)+
   xlab('')+ylab('Number of Cases in 1,000')
-ggsave('./results/UKBB_disease_EDA/nCases.pdf',useDingbats=F,height=8,width=11)
+ggsave('./results/UKBB_disease_EDA/nCases.pdf',useDingbats=F,height=8,width=16)
 ```
 
 ```{r,fig.height=10}
@@ -166,7 +223,10 @@ disAgeMat=disAgeMat[,colnames(disAgeMat)!='<NA>']
 disAgeMat$Disease=NULL
 disAgeMat=as.matrix(disAgeMat)
 disAgeMat=t(apply(disAgeMat,1,function(x)x/sum(x)))
-pheatmap::pheatmap(disAgeMat,cluster_cols = F, cellwidth=15,cellheight = 15, filename='./results/UKBB_disease_EDA/ageOnsetHeatmap_5.pdf')
+pheatmap::pheatmap(disAgeMat,cluster_cols = F, cellwidth=15,cellheight = 15,
+                   breaks = seq(0,max(disAgeMat),length.out = 20),
+                   color = colorRampPalette(RColorBrewer::brewer.pal(5,'Blues'))(19),
+                   filename='./results/UKBB_disease_EDA/ageOnsetHeatmap_5.pdf')
 pdf('./results/UKBB_disease_EDA/ageOnsetPCA_5.pdf',useDingbats = F, width=15,height=15)
 biplot(prcomp((disAgeMat)))
 dev.off()
@@ -186,7 +246,9 @@ disAgeMat=disAgeMat[,colnames(disAgeMat)!='<NA>']
 disAgeMat$Disease=NULL
 disAgeMat=as.matrix(disAgeMat)
 disAgeMat=t(apply(disAgeMat,1,function(x)x/sum(x)))
-pheatmap::pheatmap(disAgeMat,cluster_cols = F, cellwidth=15,cellheight = 15, filename='./results/UKBB_disease_EDA/ageOnsetHeatmap_10.pdf')
+pheatmap::pheatmap(disAgeMat,cluster_cols = F, cellwidth=15,cellheight = 15,
+                   breaks = seq(0,max(disAgeMat),length.out = 20),
+                   color = colorRampPalette(RColorBrewer::brewer.pal(5,'Blues'))(19), filename='./results/UKBB_disease_EDA/ageOnsetHeatmap_10.pdf')
 pdf('./results/UKBB_disease_EDA/ageOnsetPCA_10.pdf',useDingbats = F, width=15,height=15)
 biplot(prcomp((disAgeMat)))
 dev.off()
@@ -217,7 +279,7 @@ disDat=as.matrix(disDat)
 ```
 
 ```{r}
-disDat[1:5,1:5]
+disDat[1:3,1:3]
 ```
 
 ```{r}
@@ -228,10 +290,12 @@ diag(dis_dis_cooccur)=NA
 
 ```{r}
 mygdat=apply(t(apply(dis_dis_cooccur,1,scale)),2,scale)
+# mygdat=dis_dis_cooccur
 colnames(mygdat)=colnames(dis_dis_cooccur)
 rownames(mygdat)=rownames(dis_dis_cooccur)
+ul=max(c(abs(max(mygdat,na.rm = T)),abs(min(mygdat,na.rm = T))))
 pheatmap::pheatmap(mygdat,cellwidth = 10,cellheight = 10,filename='./results/UKBB_disease_EDA/disCooccur.pdf',
-                   breaks = seq(-7,7,length.out = 20),
-                   color = colorRampPalette(c('#2166AC','gray90','#B2182B'))(19))
+                   breaks = seq(-ul,ul,length.out = 20),
+                   color = colorRampPalette(rev(RColorBrewer::brewer.pal(8,'RdBu')))(19))
 ```
 

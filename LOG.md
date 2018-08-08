@@ -79,6 +79,12 @@ Done using ./scripts/04-UKBB_EDA.Rmd
 
 Done using ./scripts/05-UKBB_SRDiseases.Rmd
 
+## 08.08.2018
+
+### Exploratory Data Analysis for the self-reported diseases
+
+Updated ./scripts/05-UKBB_SRDiseases.Rmd to account for the hierarchical relationship between diseases.
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
