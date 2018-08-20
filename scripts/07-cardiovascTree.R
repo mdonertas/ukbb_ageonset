@@ -8,7 +8,7 @@ cardnodes=subcomponent(disTree,'1071',mode = 'out')$name
 cardTree=induced_subgraph(disTree,cardnodes)
 nms=unname(setNames(disCoding$meaning,disCoding$node_id)[V(cardTree)$name])
 V(cardTree)$desc=nms
-pdf('./results/UKBB_disease_EDA/cardioTree.pdf',width=30,height = 15)
+pdf('./results/UKBB_disease_EDA/cardioTree.pdf',width=30,height = 15, useDingbats=F)
 
 plot(cardTree, 
      layout=layout_as_tree,
