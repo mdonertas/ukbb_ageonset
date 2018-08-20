@@ -91,6 +91,10 @@ Updated ./scripts/05-UKBB_SRDiseases.Rmd to account for the hierarchical relatio
 
 Using ./scripts/06-checkExtremeNumDiseases.R , we check if the people with the highest number of diseases have diseases in the same clade or across different disease clades - as a check to see if there might be a data mishandling. The resulting trees for the top 5 are saved as ./results/UKBB_disease_EDA/top5NumDis_N_tree.pdf There is no obvious problem, it seems like these people indeed have reported many different diseases. 
 
+### Create a tree for only cardiovascular diseases to give as an example
+
+Done using ./scripts/cardiovascTree.R
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
