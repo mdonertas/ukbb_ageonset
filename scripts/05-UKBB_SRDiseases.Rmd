@@ -195,9 +195,9 @@ disSet %>%
   coord_flip()+
   xlab('')+
   ylab('Number of Cases in 1,000')+
-  scale_y_continuous(breaks=c(-300,-200,-100,0,100,200,300),
-                     labels=c(300,200,100,0,100,200,300))
-ggsave('./results/UKBB_disease_EDA/nCases_sex.pdf', useDingbats=F, height=16, width = 10)
+  scale_y_continuous(breaks=c(-400,-300,-200,-100,0,100,200,300,400),
+                     labels=c(400,300,200,100,0,100,200,300,400),limits = c(-450,450))
+ggsave('./results/UKBB_disease_EDA/nCases_sex.pdf', useDingbats=F, height=18, width = 12)
 ```
 
 ```{r,fig.height=10}
