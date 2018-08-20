@@ -84,6 +84,12 @@ Done using ./scripts/05-UKBB_SRDiseases.Rmd
 ### Exploratory Data Analysis for the self-reported diseases
 
 Updated ./scripts/05-UKBB_SRDiseases.Rmd to account for the hierarchical relationship between diseases.
+ 
+## 20.08.2018
+
+### Check participants with the highest number of diseasess
+
+Using ./scripts/06-checkExtremeNumDiseases.R , we check if the people with the highest number of diseases have diseases in the same clade or across different disease clades - as a check to see if there might be a data mishandling. The resulting trees for the top 5 are saved as ./results/UKBB_disease_EDA/top5NumDis_N_tree.pdf There is no obvious problem, it seems like these people indeed have reported many different diseases. 
 
 # References
 
