@@ -110,6 +110,13 @@ In order to have tidy figures of diseases trees with the names of the diseases, 
 1. ./results/UKBB_disease_EDA/diseaseTree.pdf
 2. ./results/UKBB_disease_EDA/cardioTree.pdf
 
+### Update disease age of onset heatmaps
+
+Updated ./scripts/05-UKBB_SRDiseases.Rmd 
+
+The age range is now from 0 to 70. All people in the group 70-75 or 70-80 were 70 point X years old. These ages are floored so that 70.1 and 70.9 are all considered as 70, as 10.1 and 10.9 are considered 10. The age range is thus from 0 to 70 now. 
+Also we introduced cut_tree argument to heatmaps to observe clusters of diseases.
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
