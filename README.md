@@ -25,8 +25,8 @@ What is the link between ageing and ageing-related diseases (ARDs)?
 2. Hallmarks of ageing
 3. Ageing genes (GenAge-like, expression)
 4. Healthy people but with variant:
-	4.1. Health measures in UKBB
-	4.2. Epigenetic Age
+	* Health measures in UKBB
+	* Epigenetic Age
 
 ## Data
 
