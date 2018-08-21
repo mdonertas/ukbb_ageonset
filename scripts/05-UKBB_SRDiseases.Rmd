@@ -225,8 +225,8 @@ disAgeMat=as.matrix(disAgeMat)
 disAgeMat=t(apply(disAgeMat,1,function(x)x/sum(x)))
 pheatmap::pheatmap(disAgeMat,cluster_cols = F, cellwidth=15,cellheight = 15,
                    breaks = seq(0,max(disAgeMat),length.out = 20),
-                   color = colorRampPalette(RColorBrewer::brewer.pal(5,'Blues'))(19),
-                   cutree_rows = 7,
+                   color = c('white',(colorRampPalette(RColorBrewer::brewer.pal(5,'Blues'))(19))),
+                   cutree_rows = 15,
                    filename='./results/UKBB_disease_EDA/ageOnsetHeatmap_5.pdf')
 pdf('./results/UKBB_disease_EDA/ageOnsetPCA_5.pdf',useDingbats = F, width=15,height=15)
 biplot(prcomp((disAgeMat)))
@@ -249,8 +249,8 @@ disAgeMat=as.matrix(disAgeMat)
 disAgeMat=t(apply(disAgeMat,1,function(x)x/sum(x)))
 pheatmap::pheatmap(disAgeMat,cluster_cols = F, cellwidth=15,cellheight = 15,
                    breaks = seq(0,max(disAgeMat),length.out = 20),
-                   color = colorRampPalette(RColorBrewer::brewer.pal(5,'Blues'))(19),
-                   cutree_rows = 7, 
+                   color = c('white',(colorRampPalette(RColorBrewer::brewer.pal(5,'Blues'))(19))),
+                   cutree_rows = 15, 
                    filename='./results/UKBB_disease_EDA/ageOnsetHeatmap_10.pdf')
 pdf('./results/UKBB_disease_EDA/ageOnsetPCA_10.pdf',useDingbats = F, width=15,height=15)
 biplot(prcomp((disAgeMat)))

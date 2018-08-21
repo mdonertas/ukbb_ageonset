@@ -69,6 +69,6 @@ for(nint in c(5,10)){
   pheatmap::pheatmap(disAgeMat2,cluster_cols = F, cellwidth=15,cellheight = 15,
                      breaks = seq(0,ul,length.out = 20),
                      color = c('white',(colorRampPalette(RColorBrewer::brewer.pal(5,'Blues'))(19))),
-                     cutree_rows = 7,
+                     cutree_rows = 15,
                      filename=paste('./results/UKBB_disease_EDA/ageOnsetHeatmap_Norm_',nint,'.pdf',sep=''))
 }
