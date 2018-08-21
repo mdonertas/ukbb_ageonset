@@ -101,6 +101,15 @@ Done using ./scripts/08-ageNormalisedDiseases.R
 
 For each disease, number of people diagnosed in a given age range is calculated, normalised by the total number of people above that age range. Each row is then divided by the total to examine & cluster age of onset distributions. 
 
+## 21.08.2018
+
+### Create Named Trees using d3 libraries
+
+In order to have tidy figures of diseases trees with the names of the diseases, we used d3 library. The scripts used to create the plots are under ./scripts/09-namedTrees and the figures are: 
+
+1. ./results/UKBB_disease_EDA/diseaseTree.pdf
+2. ./results/UKBB_disease_EDA/cardioTree.pdf
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
