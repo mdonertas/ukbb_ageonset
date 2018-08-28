@@ -154,6 +154,12 @@ script 08-pilot/02-fix_fam_files.sh
 
 UKBiobank data has batch in its phenotype column. These are replaced by 1 as required by bolt-lmm and saved as ./data/raw/ukbb/fam4bolt
 
+### PILOT: GWAS - Sample remove files 
+
+script: 08-pilot/03-removeFiles4bolt.R
+
+Bolt can input a list of samples to exclude. In this script we prepare files including i) participants excluded their data from the analysis. ii) samples excluded due to sample QC, and iii) samples in plink format but not in bgen. 
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
