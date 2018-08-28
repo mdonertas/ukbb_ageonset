@@ -148,6 +148,12 @@ script: 08-pilot/01-EDA.R
 * Number of other diseases
 * Number of cancers
 
+### PILOT: GWAS - Fix fam files
+
+script 08-pilot/02-fix_fam_files.sh
+
+UKBiobank data has batch in its phenotype column. These are replaced by 1 as required by bolt-lmm and saved as ./data/raw/ukbb/fam4bolt
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
