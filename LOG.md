@@ -138,6 +138,15 @@ Now instead of clustering diseases into 3-4 based on age of onset, we cluster th
 
 Specifically script first calculates age of onset densities for each disease, using smooth.spline function we predict the densities for 0 to 71 ages with 0.1 increments. Then, we cluster diseases based on these predicted values - using hclust() and dist() functions in R with default functions. The dendrograms are plotted for the hclust but colored based on the number of clusters. The age of onset distributions added to plots are generated to represent group age of onset distribution. In these density plots, the line shows average density for the diseases in a given cluster for the given age, whereas the gray shade shows the standard deviation for a given cluster. 
 
+### PILOT: EDA for the selected diseases
+
+script: 08-pilot/01-EDA.R
+
+* Number of cases
+* Age of onset distributions
+* Correlations
+* Number of other diseases
+* Number of cancers
 
 # References
 
