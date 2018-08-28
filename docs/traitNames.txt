@@ -1,0 +1,61 @@
+Recommended genomic analysis exclusions
+Genetic relatedness exclusions
+
+Ethnic background
+Genetic ethnic grouping
+
+Sex
+Genetic sex
+
+Year of birth
+Date of attending assessment centre
+Age when attended assessment centre
+Age at recruitment
+
+Age at death
+
+Standing height
+Weight
+
+Number of self-reported cancers
+Cancer code, self-reported
+Interpolated Age of participant when cancer first diagnosed
+Type of cancer: ICD10
+Age at cancer diagnosis
+
+Number of self-reported non-cancer illnesses
+Non-cancer illness code, self-reported
+Interpolated Age of participant when non-cancer illness first diagnosed
+Diagnoses - main ICD10
+
+Number of operations, self-reported
+Operation code
+Interpolated Age of participant when operation took place
+
+Number of treatments/medications taken
+Treatment/medication code
+
+Sleep duration
+
+Facial ageing
+
+Maternal smoking around birth
+Smoking status
+Alcohol drinker status
+
+Father's age at death
+Mother's age at death
+Illnesses of father
+Illnesses of mother
+Illnesses of siblings
+
+Overall health rating
+Health satisfaction
+
+Age when periods started (menarche)
+Age at menopause (last menstrual period)
+
+Non-accidental death in close genetic family
+
+
+

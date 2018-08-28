@@ -128,6 +128,16 @@ cardiovascTree.R -> NULL (now done using 06-namedTrees)
 
 Updated the way disease-disease co-occurrance is calculated - now use Pearson. 
 
+## 28.08.2018
+
+### Age of onset clusters
+
+script: 07-ageofonset_clusters.R
+
+Now instead of clustering diseases into 3-4 based on age of onset, we cluster them using hierchical clustering based on the spline curves for the densities. Results for k=2:25 clusters are saved under ./results/UKBB_disease_EDA/ageonset/ 
+
+Specifically script first calculates age of onset densities for each disease, using smooth.spline function we predict the densities for 0 to 71 ages with 0.1 increments. Then, we cluster diseases based on these predicted values - using hclust() and dist() functions in R with default functions. The dendrograms are plotted for the hclust but colored based on the number of clusters. The age of onset distributions added to plots are generated to represent group age of onset distribution. In these density plots, the line shows average density for the diseases in a given cluster for the given age, whereas the gray shade shows the standard deviation for a given cluster. 
+
 
 # References
 
