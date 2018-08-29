@@ -45,12 +45,12 @@ diseaseCases <- SRdisease %>%
   summarise(case=list(unique(as.character(eid))))
 
 diseaseCols <- apply(diseaseCases,1,function(x){
-  pheno$eid %in% x$case
+  as.numeric(pheno$eid %in% x$case)
 })
 
 colnames(diseaseCols) <- paste('d',diseaseCases$node_id,sep='')
 
-anydisease <- rowSums(diseaseCols==TRUE)>0
+anydisease <- as.numeric(rowSums(diseaseCols)>0)
 
 SRcancer <- readRDS('./data/processed/traits_clean/SRcancer_baseline.rds') %>%
   filter(!eid %in% exclusions)
@@ -61,14 +61,14 @@ cancerCases <- SRcancer %>%
   mutate(node_id=paste('c',node_id,sep=''))
 
 cancerCols <- apply(cancerCases,1,function(x){
-  pheno$eid %in% x$case
+  as.numeric(pheno$eid %in% x$case)
 })
 
 colnames(cancerCols) <- cancerCases$node_id
 
-anycancer <- rowSums(cancerCols==TRUE)>0
+anycancer <- as.numeric(rowSums(cancerCols)>0)
 
-anydisorcancer <- anycancer | anydisease
+anydisorcancer <- as.numeric(anycancer | anydisease)
 
 disIDs <- unique((readRDS('./data/processed/traits_clean/SRdiseaseSet.rds') %>%
                     left_join(rename(read_tsv('./data/raw/ukbb/datacoding/coding6.tsv'),Disease=meaning)))$node_id)
@@ -100,5 +100,8 @@ phenoData <- phenoData %>%
 
 dim(phenoData)
 # [1] 484666    263
+
 phenoData %>%
-  write_delim('./data/processed/ukbb/gwas/pheno/phenoFile.pheno',delim=' ')
+  mutate(Sex = as.numeric(as.factor(Sex)),
+         batch = as.numeric(as.factor(batch))) %>%
+  write_delim('./data/processed/ukbb/gwas/pheno/phenoFile_noChar.pheno',delim=' ')
