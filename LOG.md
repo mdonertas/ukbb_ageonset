@@ -179,6 +179,10 @@ For the sex specific GWAS runs, we prepared remove files for males and females a
 GWAS related files under 08-pilot/ folder are now under 08-gwas/ folder as these are independent from the diseases to be analysed - and general. 
 08-pilot is now 09-pilot to respect the order of scripts.
 
+### PILOT: EDA 
+
+Repeat EDA after making sure we do not include any of the exclusions saved under ./data/processed/ukbb/gwas/remove files 
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116

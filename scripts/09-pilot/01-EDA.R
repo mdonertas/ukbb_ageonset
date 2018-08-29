@@ -6,7 +6,12 @@ library(igraph)
 
 theme_set(theme_rfr(legend.pos = 'top'))
 
-traits <- readRDS('./data/processed/traits_clean/traitData_baseline.rds')
+exclusions <- unique(c(read_delim('./data/processed/ukbb/gwas/remove/inplink_notin_bgen.fam',delim=' ',col_names = F)$X1,
+                       read_delim('./data/processed/ukbb/gwas/remove/sampleQC_exc.fam',delim=' ',col_names = F)$X1,
+                       read_delim('./data/processed/ukbb/gwas/remove/withdrawn.fam',delim=' ',col_names = F)$X1))
+
+traits <- readRDS('./data/processed/traits_clean/traitData_baseline.rds') %>%
+  filter(!eid %in% exclusions)
 traits <- traits %>%
   mutate(Sex = c('Female','Male')[Sex+1])%>%
   mutate(BMI = Weight/((`Standing height`/100)^2))
@@ -43,14 +48,34 @@ plot(disTree,
      vertex.color=c('gray70','gray25')[1+(V(disTree)$name%in%selectedNodes)])
 dev.off()
 
-SRdisease <- readRDS('./data/processed/traits_clean/SRdisease_baseline_propagated.rds')
+SRdisease <- readRDS('./data/processed/traits_clean/SRdisease_baseline_propagated.rds') %>%
+  filter(!eid %in% exclusions)
 
 SRdisease <- traits %>%
   select(eid,Sex)%>%
   right_join(SRdisease,by='eid')
 
-prevDF <- readRDS('./data/processed/traits_clean/SRdisease_prevdf.rds')
-disSetUlt <- readRDS('./data/processed/traits_clean/SRdiseaseSet.rds')
+prevDF <- SRdisease %>%
+  select(Disease,Age,eid) %>%
+  right_join(select(traits,eid,Sex)) %>% 
+  na.omit()%>%
+  group_by(Disease,Sex)%>%
+  summarise(nCases = length(unique(eid))) %>%
+  spread(Sex, nCases) %>%
+  mutate(fPrev=Female/sum(traits$Sex=='Female'),
+         mPrev=Male/sum(traits$Sex=='Male'),
+         nCases=sum(Female,Male,na.rm=T)) %>%
+  mutate(fCase=nCases/(sum(traits$Sex=='Female')+sum(traits$Sex=='Male')))%>%
+  ungroup()
+
+saveRDS(prevDF,'./data/processed/traits_clean/SRdisease_prevdf.rds')
+
+disSetUlt <- prevDF %>%
+  na.omit() %>%
+  filter(nCases>=2000 & fPrev>=0.001 & mPrev>=0.001)%>%
+  filter(Disease!='unclassifiable')
+
+saveRDS(disSetUlt,'./data/processed/traits_clean/SRdiseaseSet.rds')
 
 SRdiseasesub <- SRdisease %>%
   filter(node_id %in% selectedNodes)
