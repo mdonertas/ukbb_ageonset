@@ -160,6 +160,16 @@ script: 08-pilot/03-removeFiles4bolt.R
 
 Bolt can input a list of samples to exclude. In this script we prepare files including i) participants excluded their data from the analysis. ii) samples excluded due to sample QC, and iii) samples in plink format but not in bgen. 
 
+## 29.08.2018
+
+### PILOT: GWAS - Genotype files
+
+script: 08-pilot/04-unzip4plink.sh
+
+Plink does not work well with zipped files. So we created a local copy of the genotype files under ./data/raw/ukbb/genotypes/
+
+Here we also include fam files under ./data/processed/ukbb/gwas/fam4bolt since it is easier to run code when all bed bim fam files are together. 
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
