@@ -183,6 +183,12 @@ GWAS related files under 08-pilot/ folder are now under 08-gwas/ folder as these
 
 Repeat EDA after making sure we do not include any of the exclusions saved under ./data/processed/ukbb/gwas/remove files 
 
+### GWAS: exclude files
+
+script: 08-gwas/05-excludeFiles4bolt.R
+
+Exclude files are prepared including SNPs with MAF<=0.001 ('./data/processed/ukbb/gwas/exclude/maf.txt') and hwe-p<=1e-6 ('./data/processed/ukbb/gwas/exclude/hwe.txt').
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
