@@ -174,6 +174,11 @@ Here we also include fam files under ./data/processed/ukbb/gwas/fam4bolt since i
 
 For the sex specific GWAS runs, we prepared remove files for males and females as well.
 
+### Change the organisation of files
+
+GWAS related files under 08-pilot/ folder are now under 08-gwas/ folder as these are independent from the diseases to be analysed - and general. 
+08-pilot is now 09-pilot to respect the order of scripts.
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
