@@ -189,6 +189,14 @@ script: 08-gwas/05-excludeFiles4bolt.R
 
 Exclude files are prepared including SNPs with MAF<=0.001 ('./data/processed/ukbb/gwas/exclude/maf.txt') and hwe-p<=1e-6 ('./data/processed/ukbb/gwas/exclude/hwe.txt').
 
+### GWAS: pheno file
+
+script 08-gwas/06-phenoFile.R
+
+output: './data/processed/ukbb/gwas/pheno/phenoFile.pheno'
+
+this file includes phenotype data for all participants in UKBB (who pass QC). File includes both gwas phenotypes and covariates. Each time we run BOLT-LMM, we will specify which column to use using --qCovarCol --covarCol and --phenoCol parameters.
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
