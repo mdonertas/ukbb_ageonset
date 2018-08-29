@@ -170,6 +170,10 @@ Plink does not work well with zipped files. So we created a local copy of the ge
 
 Here we also include fam files under ./data/processed/ukbb/gwas/fam4bolt since it is easier to run code when all bed bim fam files are together. 
 
+### PILOT: GWAS - Sample remove files
+
+For the sex specific GWAS runs, we prepared remove files for males and females as well.
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116

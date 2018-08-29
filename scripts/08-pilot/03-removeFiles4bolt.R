@@ -34,3 +34,14 @@ inplink_notin_bgen <- famx %>%
 
 
 inplink_notin_bgen %>% write_delim(paste(savepath,'inplink_notin_bgen.fam',sep=''),col_names = F)
+
+
+males <- famx %>%
+  filter(X1 %in% filter(traits,Sex==1)$eid)
+
+males %>% write_delim(paste(savepath,'males.fam',sep=''),col_names = F)
+
+females <- famx %>%
+  filter(X1 %in% filter(traits,Sex==0)$eid)
+
+females %>% write_delim(paste(savepath,'females.fam',sep=''),col_names = F)
