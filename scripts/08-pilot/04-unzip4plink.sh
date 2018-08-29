@@ -14,3 +14,5 @@ for i in {1..22}
 do
 cp /nfs/research1/thornton/ukbb_ageonset/data/processed/ukbb/gwas/fam4bolt/ukb30688_cal_chr$i\_v2_s488346.fam /nfs/research1/thornton/ukbb_ageonset/data/raw/ukbb/genotypes/chr$i.fam
 done
+
+gunzip /nfs/research1/thornton/ukbb_ageonset/data/raw/ukbb/genotypes/*.gz
