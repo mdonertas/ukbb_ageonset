@@ -39,8 +39,8 @@ dend <- as.dendrogram(hc)
 owd=getwd()
 system('mkdir -p ./results/UKBB_disease_EDA/ageonset')
 for(hcut in 2:25){
-  system(paste('mkdir -p ./results/UKBB_disease_EDA/ageonset/',hcut,'cluster',sep=''))
-  setwd(paste('./results/UKBB_disease_EDA/ageonset/',hcut,'cluster',sep=''))
+  system(paste('mkdir -p /nfs/research1/thornton/ukbb_ageonset/results/UKBB_disease_EDA/ageonset/',hcut,'cluster',sep=''))
+  setwd(paste('/nfs/research1/thornton/ukbb_ageonset/results/UKBB_disease_EDA/ageonset/',hcut,'cluster',sep=''))
   print(hcut)
   if(hcut<=1){
     discl=cutree(hc,h=hcut)
