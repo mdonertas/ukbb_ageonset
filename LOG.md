@@ -203,6 +203,12 @@ script: './09-pilot/02-runGWAS.sh'
 
 We run GWAS for all 7 diseases. 
 
+## PILOT: postGWAS analysis, snp2gene mapping
+
+script: './09-pilot/03-snp2GeneMapping.R'
+
+using TxDb.Hsapiens.UCSC.hg19.knownGene library and GTEx eQTL data, we map all snps to genes. The files are saved as ./data/processed/pilot/snp2gene_proxy.rds and ./data/processed/pilot/snp2gene_eQTL.rds
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116
