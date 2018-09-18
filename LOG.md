@@ -215,6 +215,24 @@ script: './09-pilot/02.2-ageonsetGWAS.sh'
 
 We run GWAS for all 7 diseases.
 
+## PILOT: Post GWAS per Disease
+
+For each disease, we run the scripts:
+
+* ./scripts/pilot/04-postGWAS_perdisease.R
+* ./scripts/pilot/04.2-postGWAS_ageonset_perdisease.R
+
+Steps include:
+
+1. QQ Plot
+2. Annotating all SNPs by proximity to geness
+3. Running KEGG enrichment using the minimum p value for each gene
+4. Compiling the GWASCatalog Traits for the genes
+5. Annotating all SNPs by eQTL (GTEx, any tissue)
+6. Running KEGG enrichment using the minimum p value for each gene
+7. Compiling the GWASCatalog Traits for the genes
+8. Manhattan plots
+
 # References
 
 [1] Anderson, C. A., Pettersson, F. H., Clarke, G. M., Cardon, L. R., Morris, A. P., & Zondervan, K. T. (2010). Data quality control in genetic case-control association studies. Nature Protocols, 5(9), 1564–1573. https://doi.org/10.1038/nprot.2010.116

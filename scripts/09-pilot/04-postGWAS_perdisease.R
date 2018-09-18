@@ -10,30 +10,31 @@ gwasCat_report <- function(gwasCat_assocFile,genelist){
   martx=biomaRt::useMart('ensembl','hsapiens_gene_ensembl')
   geneInfo <- biomaRt::getBM(attributes = c('hgnc_symbol','description'),
                              filters = c('hgnc_symbol'),values = genelist,mart = martx) %>% unique()%>%
-    mutate(description=sapply(strsplit(description,'[[]'),function(x)x[1])) %>%
-    rename(MAPPED_GENE = hgnc_symbol)
-  gwasCatRes <- left_join(geneInfo, gwascat)%>%
-    dplyr::select(MAPPED_GENE,description,MAPPED_TRAIT)%>%
+    mutate(description=sapply(strsplit(description,'[[]'),function(x)x[1]))
+  gwasCatRes <- filter(gwascat,MAPPED_GENE%in%genelist)%>%
+    dplyr::select(MAPPED_GENE,MAPPED_TRAIT)%>%
     unique() %>%
     dplyr::rename(hgnc_symbol=MAPPED_GENE,
                   GWASCATALOG=MAPPED_TRAIT)
-    gwasCatRes <- reshape2::melt(apply(gwasCatRes,1,function(x){
-      data.frame(hgnc_symbol=x[1],description=x[2],GWASCATALOG=strsplit(x[3],', ')[[1]])}),id.vars=c('hgnc_symbol','description','GWASCATALOG'))%>%
-      dplyr::select(-L1) %>%
-      unique()%>%
-      group_by(hgnc_symbol,description) %>%
-      summarise(GWASCATALOG=list(unique(GWASCATALOG)))
-    gwasCatRes$GWASCATALOG <- sapply(gwasCatRes$GWASCATALOG,function(x){
-      paste(x,collapse = ', ')
-    })
+  gwasCatRes <- reshape2::melt(apply(gwasCatRes,1,function(x){
+    data.frame(hgnc_symbol=x[1],GWASCATALOG=strsplit(x[2],', ')[[1]])}),id.vars=c('hgnc_symbol','GWASCATALOG'))%>%
+    dplyr::select(-L1) %>%
+    unique()%>%
+    right_join(geneInfo)%>%
+    unique() %>%
+    group_by(hgnc_symbol,description) %>%
+    summarise(GWASCATALOG=list(unique(GWASCATALOG)))
+  gwasCatRes$GWASCATALOG <- sapply(gwasCatRes$GWASCATALOG,function(x){
+    paste(x,collapse = ', ')
+  })
   return(gwasCatRes)
 }
 
-system(paste('mkdir -p data/processed/pilot/ageonset/d',disID,sep=''))
-system(paste('mkdir -p results/pilot/ageonset/d',disID,sep=''))
+system(paste('mkdir -p data/processed/pilot/caseControl/d',disID,sep=''))
+system(paste('mkdir -p results/pilot/caseControl/d',disID,sep=''))
 disCoding <- read_tsv('data/raw/ukbb/datacoding/coding6.tsv')
 disname <- filter(disCoding,node_id==disID)$meaning
-gwasRes <- read_tsv(paste('data/processed/ukbb/gwas/ageonset/ageonset_',disID,'.imp.stats',sep='')) %>%
+gwasRes <- read_tsv(paste('data/processed/ukbb/gwas/bolt/a',disID,'.imp.stats',sep=''), n_max = ) %>%
   mutate(CHR=as.character(CHR)) %>%
   rename(Ref = ALLELE1, Alt = ALLELE0)
 
@@ -51,7 +52,7 @@ qqplot <- gwasRes %>%
   guides(fill = guide_colorbar(expression(paste(log[10],"Count"))))+
   ggtitle(disname)
 
-ggsave(filename = paste('results/pilot/ageonset/d',disID,'/qqplot.pdf',sep=''),plot = qqplot,device ='pdf',width=7,height=6)
+ggsave(filename = paste('results/pilot/caseControl/d',disID,'/qqplot.pdf',sep=''),plot = qqplot,device ='pdf',width=7,height=6)
 rm(qqplot)
 ## combine with gene info
 
@@ -63,14 +64,14 @@ proxyGenes <- readRDS('./data/processed/pilot/snp2gene_proxy.rds') %>%
   unique() %>%
   right_join(gwasRes)
 
-write_tsv(proxyGenes, paste('data/processed/pilot/ageonset/d',disID,'/gwasRes_proxyGenes.tsv',sep=''))
-saveRDS(proxyGenes,paste('data/processed/pilot/ageonset/d',disID,'/gwasRes_proxyGenes.rds',sep=''))
+write_tsv(proxyGenes, paste('data/processed/pilot/caseControl/d',disID,'/gwasRes_proxyGenes.tsv',sep=''))
+saveRDS(proxyGenes,paste('data/processed/pilot/caseControl/d',disID,'/gwasRes_proxyGenes.rds',sep=''))
 
 signifProxy <- proxyGenes %>%
   filter(P_BOLT_LMM_INF<=5e-8)
 
-write_tsv(signifProxy,paste('data/processed/pilot/ageonset/d',disID,'/signif_gwasRes_proxyGenes.tsv',sep=''))
-saveRDS(signifProxy,paste('data/processed/pilot/ageonset/d',disID,'/signif_gwasRes_proxyGenes.rds',sep=''))
+write_tsv(signifProxy,paste('data/processed/pilot/caseControl/d',disID,'/signif_gwasRes_proxyGenes.tsv',sep=''))
+saveRDS(signifProxy,paste('data/processed/pilot/caseControl/d',disID,'/signif_gwasRes_proxyGenes.rds',sep=''))
 
 ### proxyGenes
 
@@ -82,18 +83,19 @@ proxyGenes_pvals <- proxyGenes %>%
 proxyGenes_pvals = sort(setNames(proxyGenes_pvals$pval,proxyGenes_pvals$proxy_entrez),decreasing = T)
 proxyGenes_pvals [ proxyGenes_pvals == Inf ] = max( setdiff( proxyGenes_pvals, Inf ) )
 proxyGenes_pvals = sort(proxyGenes_pvals, decreasing = T)
-saveRDS(proxyGenes_pvals,paste('data/processed/pilot/ageonset/d',disID,'/proxy_gene_pvals.rds',sep=''))
+
+saveRDS(proxyGenes_pvals,paste('data/processed/pilot/caseControl/d',disID,'/proxy_gene_pvals.rds',sep=''))
 
 kegg_proxy <- gseKEGG(geneList = proxyGenes_pvals, nPerm = 1000, minGSSize = 20, organism = 'hsa', keyType = 'kegg', maxGSSize = 500, pvalueCutoff = 1, pAdjustMethod = 'fdr', seed = T)
 
 kegg_proxy@result %>%
-  write_tsv(paste('results/pilot/ageonset/d',disID,'/proxyKEGG.tsv',sep=''))
-saveRDS(kegg_proxy,paste('data/processed/pilot/ageonset/d',disID,'/proxyKEGG.rds',sep=''))
+  write_tsv(paste('results/pilot/caseControl/d',disID,'/proxyKEGG.tsv',sep=''))
+saveRDS(kegg_proxy,paste('data/processed/pilot/caseControl/d',disID,'/proxyKEGG.rds',sep=''))
 
-if (length(setdiff(unique(signifProxy$proxy_hgnc),c('',NA)))>=1){
+if (nrow(signifProxy)>=1){
   proxyGWASCatRep <- gwasCat_report(gwasCat_assocFile='../melike/projects/shared_data/GWASCatalog_20180906/data/gwas_catalog_v1.0.2-associations_e93_r2018-08-28.tsv',genelist = setdiff(signifProxy$proxy_hgnc,c('',NA)))
   
-  write_tsv(proxyGWASCatRep,paste('results/pilot/ageonset/d',disID,'/proxyGWASCatReport.tsv',sep=''))
+  write_tsv(proxyGWASCatRep,paste('results/pilot/caseControl/d',disID,'/proxyGWASCatReport.tsv',sep=''))
   
   signifProxy2Label <- as.tibble(t(sapply(setdiff(unique(signifProxy$proxy_hgnc),c(NA,'')),function(gene){
     xx <- filter(signifProxy,proxy_hgnc==gene)
@@ -112,14 +114,14 @@ eQTLGenes <- readRDS('./data/processed/pilot/snp2gene_eQTL2.rds') %>%
   filter(SNP %in% gwasRes$SNP)%>%
   right_join(gwasRes)
 
-write_tsv(eQTLGenes,paste('data/processed/pilot/ageonset/d',disID,'/gwasRes_eQTLGenes.tsv',sep=''))
-saveRDS(eQTLGenes,paste('data/processed/pilot/ageonset/d',disID,'/gwasRes_eQTLGenes.rds',sep=''))
+write_tsv(eQTLGenes,paste('data/processed/pilot/caseControl/d',disID,'/gwasRes_eQTLGenes.tsv',sep=''))
+saveRDS(eQTLGenes,paste('data/processed/pilot/caseControl/d',disID,'/gwasRes_eQTLGenes.rds',sep=''))
 
 signifeQTL <- eQTLGenes %>%
   filter(P_BOLT_LMM_INF<=5e-8)
 
-write_tsv(signifeQTL,paste('data/processed/pilot/ageonset/d',disID,'/signif_gwasRes_eQTLGenes.tsv',sep=''))
-saveRDS(signifeQTL,paste('data/processed/pilot/ageonset/d',disID,'/signif_gwasRes_eQTLGenes.rds',sep=''))
+write_tsv(signifeQTL,paste('data/processed/pilot/caseControl/d',disID,'/signif_gwasRes_eQTLGenes.tsv',sep=''))
+saveRDS(signifeQTL,paste('data/processed/pilot/caseControl/d',disID,'/signif_gwasRes_eQTLGenes.rds',sep=''))
 
 eQTLGenes_pvals <- eQTLGenes %>%
   filter(!is.na(eQTL_entrez)) %>%
@@ -128,17 +130,17 @@ eQTLGenes_pvals <- eQTLGenes %>%
   unique()
 eQTLGenes_pvals = sort(setNames(eQTLGenes_pvals$pval,eQTLGenes_pvals$eQTL_entrez),decreasing = T)
 eQTLGenes_pvals [ eQTLGenes_pvals == Inf ] = max( setdiff( eQTLGenes_pvals, Inf ) )
-eQTLGenes_pvals = sort(eQTLGenes_pvals, decreasing = T)
+eQTLGenes_pvals = sort ( eQTLGenes_pvals, decreasing = T)
 
-saveRDS(eQTLGenes_pvals,paste('data/processed/pilot/ageonset/d',disID,'/eqtl_gene_pvals.rds',sep=''))
+saveRDS(eQTLGenes_pvals,paste('data/processed/pilot/caseControl/d',disID,'/eqtl_gene_pvals.rds',sep=''))
 
 kegg_eQTL <- gseKEGG(geneList = eQTLGenes_pvals, nPerm = 1000, minGSSize = 20, organism = 'hsa', keyType = 'kegg', maxGSSize = 500, pvalueCutoff = 1, pAdjustMethod = 'fdr', seed = T)
 
 kegg_eQTL@result %>%
-  write_tsv(paste('results/pilot/ageonset/d',disID,'/eQTLKEGG.tsv',sep=''))
-saveRDS(kegg_eQTL,paste('data/processed/pilot/ageonset/d',disID,'/eQTLKEGG.rds',sep=''))
+  write_tsv(paste('results/pilot/caseControl/d',disID,'/eQTLKEGG.tsv',sep=''))
+saveRDS(kegg_eQTL,paste('data/processed/pilot/caseControl/d',disID,'/eQTLKEGG.rds',sep=''))
 
-if (length(setdiff(unique(signifeQTL$eQTL_hgnc),c('',NA)))>=1){
+if (nrow(signifeQTL)>=1){
   signifeQTL2Label <- as.tibble(t(sapply(setdiff(unique(signifeQTL$eQTL_hgnc),c(NA,'')),function(gene){
     xx <- filter(signifeQTL,eQTL_hgnc==gene)
     c(P_BOLT_LMM_INF=xx$P_BOLT_LMM_INF[which.min(xx$P_BOLT_LMM_INF)],SNP=xx$SNP[which.min(xx$P_BOLT_LMM_INF)])
@@ -149,7 +151,7 @@ if (length(setdiff(unique(signifeQTL$eQTL_hgnc),c('',NA)))>=1){
   
   eQTLGWASCatRep <- gwasCat_report(gwasCat_assocFile='../melike/projects/shared_data/GWASCatalog_20180906/data/gwas_catalog_v1.0.2-associations_e93_r2018-08-28.tsv',genelist = unique(setdiff(signifeQTL$eQTL_hgnc,c('',NA))))
   
-  write_tsv(eQTLGWASCatRep,paste('results/pilot/ageonset/d',disID,'/eQTLGWASCatReport.tsv',sep=''))
+  write_tsv(eQTLGWASCatRep,paste('results/pilot/caseControl/d',disID,'/eQTLGWASCatReport.tsv',sep=''))
 } else{
   signifeQTL2Label <- data.frame(hgnc = NA, P_BOLT_LMM_INF=NA,SNP=NA)
 }
@@ -159,16 +161,16 @@ rm(list=setdiff(ls(),c('disCoding','gwasRes','signifProxy2Label','disID','disnam
 # combine GWAScat results
 
 if ((!all(is.na(signifProxy2Label))) & (!all(is.na(signifeQTL2Label)))){
-  gwascat <- rbind(mutate(read_tsv(paste('results/pilot/ageonset/d',
+  gwascat <- rbind(mutate(read_tsv(paste('results/pilot/caseControl/d',
                                          disID,'/eQTLGWASCatReport.tsv',sep='')),
                           type='eQTL'),
-                   mutate(read_tsv(paste('results/pilot/ageonset/d',
+                   mutate(read_tsv(paste('results/pilot/caseControl/d',
                                          disID,'/proxyGWASCatReport.tsv',sep='')),
                           type='proxy')) %>%
     group_by(hgnc_symbol, description, GWASCATALOG) %>%
     summarise(type = paste(type,collapse=', '))
   
-  write_tsv(gwascat,paste('results/pilot/ageonset/d',disID,'/GWASCatReport_combined.tsv',sep=''))
+  write_tsv(gwascat,paste('results/pilot/caseControl/d',disID,'/GWASCatReport_combined.tsv',sep=''))
 }
 
 ### merge all
@@ -225,7 +227,7 @@ p <- ggplot(don, aes(x=BPcum, y=-log10(P))) +
         legend.position = 'bottom')+
   xlab('')+ylab(expression(paste(-log[10], " p-value)")))+
   guides(color=F)
-ggsave(filename = paste('results/pilot/ageonset/d',disID,'/manhattan.jpeg',sep=''),plot = p,device = 'jpeg',dpi=300,width = 8,height = 3)
+ggsave(filename = paste('results/pilot/caseControl/d',disID,'/manhattan.jpeg',sep=''),plot = p,device = 'jpeg',dpi=300,width = 8,height = 3)
 
 if (!all(is.na(signifeQTL2Label)) ){
   p <- p + geom_text_repel(data=signifeQTL2Label,
@@ -244,4 +246,4 @@ if (!all(is.na(signifProxy2Label)) ){
     geom_point(data=data.frame(color=c(eqtlcol,proxycol)),aes(fill=color),shape=21,size=0,stroke=0,x=axisdf$center[1],y=3)+
     scale_fill_manual(values=c(eqtlcol,proxycol),labels=c('eQTL','proximity'))+
     guides(color=F,fill=guide_legend('Type of Association', override.aes = list(stroke=0.5,size=2)))}
-ggsave(filename = paste('results/pilot/ageonset/d',disID,'/manhattan_annotated.jpeg',sep=''),plot = p,device = 'jpeg',dpi=300,width = 8,height = 4)
+ggsave(filename = paste('results/pilot/caseControl/d',disID,'/manhattan_annotated.jpeg',sep=''),plot = p,device = 'jpeg',dpi=300,width = 8,height = 4)
