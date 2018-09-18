@@ -42,6 +42,7 @@ snp2gene_proxy <- function(variantInfo, genome='hg19', upstream=5000,downstream=
                             filters = c('entrezgene'),values = geneids,mart = martx) %>% unique()%>%
     mutate(entrezgene=as.character(entrezgene))
   allvar <- as.tibble(allvar) %>%
+    filter(LOCATION!='intergenic') %>%
     mutate(entrezgene=GENEID)%>%
     left_join(genemap)
   return(allvar)
@@ -88,10 +89,11 @@ proxyres <- snp2gene_proxy(gwas_as_GR, genome='hg19', upstream = 5000, downstrea
                 Alt = ALLELE0) %>%
   dplyr::mutate(CHR = gsub('chr','',CHR)) %>%
   dplyr::select( SNP, CHR, BP, Ref, Alt, proxy_entrez, proxy_hgnc, proxy_ensembl, proxy_type) %>%
-  unique() %>%
-  filter(proxy_type!='intergenic')
+  unique() 
+
 
 saveRDS(proxyres, file='data/processed/pilot/snp2gene_proxy.rds')
+
 
 filesx <- list.files('../melike/projects/shared_data/eQTL_GTEx_20180904/data/processed/signif_tissue_eQTLs/',full.names=T)
 eQTLres <- lapply(filesx,function(fx){
@@ -99,10 +101,27 @@ eQTLres <- lapply(filesx,function(fx){
   snp2gene_eQTL(gwasRes,fx,tis)
 })
 
+
 eQTLres <- reshape2::melt(eQTLres,id.vars=colnames(eQTLres[[1]])) %>%
   dplyr::rename(Ref = ALLELE1, Alt=ALLELE0, eQTL_ensembl = gene_id, eQTL_entrez = entrezgene, eQTL_hgnc=hgnc_symbol,
-         eQTL_slope=slope, eQTL_pval=pval_beta, eQTL_tissue=tissue) %>%
+                eQTL_slope=slope, eQTL_pval=pval_beta, eQTL_tissue=tissue) %>%
   dplyr::select(SNP, CHR, BP, Ref, Alt, eQTL_entrez, eQTL_hgnc, eQTL_ensembl, eQTL_slope, eQTL_pval, eQTL_tissue)%>%
   unique()
 
+
 saveRDS(eQTLres, file='data/processed/pilot/snp2gene_eQTL.rds')
+
+eQTLGenes <- eQTLres %>%
+  mutate(CHR=as.character(CHR))
+
+eQTLGenes2 <- eQTLGenes %>%
+  group_by(SNP, eQTL_entrez) %>%
+  summarise( numTissue = length(unique(eQTL_tissue)),
+             direction = 2*(mean(eQTL_slope>0)-0.5))%>%
+  unique()
+
+eQTLGenes <- eQTLGenes %>%
+  select(SNP, CHR, BP, Ref, Alt, eQTL_entrez,eQTL_hgnc, eQTL_ensembl) %>%
+  right_join(eQTLGenes2)
+
+saveRDS(eQTLGenes, file='data/processed/pilot/snp2gene_eQTL2.rds')
