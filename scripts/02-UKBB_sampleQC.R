@@ -1,27 +1,37 @@
+# libraries
 library(tidyverse)
 library(data.table)
 library(RFRlib)
 
+# definition of the fields
 fields <- read_tsv('./data/raw/ukbb/helperfiles/field.txt') %>%
   select(title, field_id) %>%
   rename(description = title) %>%
   mutate(field_id = as.character(field_id))
 
+# extract the field IDs from UKBB data
 ukbfields <- colnames(read_csv('./data/raw/ukbb/ukb10904.csv', n_max = 0,
                                col_names = T))
 ukbfields <- data.frame(fields = ukbfields)
 
+# separate field IDs into an ID, visit and a number 
+# to merge with field definitions
 ukbfields <- ukbfields %>%
   separate(fields, into = c('field_id', 'visit', 'num'), remove=F) %>%
   left_join(fields)
 
+# modify eid row so that it has the same structure as others
 ukbfields[which(ukbfields$fields == 'eid'),] <- c('eid', 'eid', 0, 0, 'eid')
+
+# create a folder to store helper files
 system('mkdir -p ./data/processed/ukbb/helperfiles')
-  
+
+# write the field definitions into a file 
 write_tsv(ukbfields,'./data/processed/ukbb/helperfiles/ukbfields.tsv')  
 
 ## Exclusions
 
+# fields to decide exclusions
 exc_fields <- ukbfields %>%
   filter(description %in% c('eid', 'Recommended genomic analysis exclusions',
                             'Genetic relatedness exclusions',
@@ -36,11 +46,19 @@ exc_fields <- ukbfields %>%
 ukb_exc <- setDF(fread('./data/raw/ukbb/ukb10904.csv',
                        select = exc_fields$fields,
                        col.names = exc_fields$description))
+dim(ukb_exc)
+# [1] 502617     11
+withdrawn <- read_tsv('./data/raw/ukbb/withdrawn',col_names = 'eid')
+ukb_exc <- ukb_exc[! ukb_exc$eid %in% withdrawn$eid,]
+dim(ukb_exc)
+# [1] 502543     11
+
 sum(is.na(ukb_exc$Heterozygosity))
-# 14253
+# 14248
 ukb_exc <- ukb_exc[!is.na(ukb_exc$Heterozygosity),]
 nrow(ukb_exc)
-# 488364
+# 488295
+
 ### Discordant sex
 disc_sex <- ukb_exc$eid[which(ukb_exc$Sex != ukb_exc$`Genetic sex`)]
 table(ukb_exc$Sex, ukb_exc$`Genetic sex`)
@@ -50,58 +68,57 @@ table(ukb_exc$Sex, ukb_exc$`Genetic sex`)
 length(disc_sex)
 # 378
 mean(ukb_exc$eid %in% disc_sex) * 100
-# [1] 0.07740128
+# [1] 0.07741222
 
 ### Sex chr aneuploidy
 sexchr_aneup <- ukb_exc$eid[which(!is.na(ukb_exc$`Sex chromosome aneuploidy`))]
 length(sexchr_aneup)
-# 652
+# 651
 mean(ukb_exc$eid %in% sexchr_aneup) * 100
-# [1] 0.133507
+# [1] 0.133321
 length(intersect(disc_sex,sexchr_aneup))
 # 181
 mean(disc_sex %in% sexchr_aneup) * 100
 # [1] 47.8836
 mean(sexchr_aneup %in% disc_sex) * 100
-# [1] 27.76074
+# [1] 27.80338
 
 sex_exc <- union(disc_sex, sexchr_aneup)
 length(sex_exc)
-# 849
+# 848
+
+system('mkdir -p ./data/processed/ukbb/sampleQC')
 
 sex_exc_df <- data.frame(eid = sex_exc)
 write_tsv(sex_exc_df, './data/processed/ukbb/sampleQC/discSex_exclusions.tsv')
-
-ukb_exc <- ukb_exc[!ukb_exc$eid %in% sex_exc,]
-dim(ukb_exc)
-# [1] 487515     11
 
 ## Recommended genomic analysis exclusions:
 # poor heterozygosity/missingness
 poorheterozyg_or_missing <- ukb_exc$eid[which(!is.na(ukb_exc$`Recommended genomic analysis exclusions`))]
 length(poorheterozyg_or_missing)
-# 468
+# 469
 
 ## Genetic relatedness exclusions
 # Participant self-declared as having a mixed ancestral background
 mixed_anc <- ukb_exc$eid[which(ukb_exc$`Genetic relatedness exclusions` == 1)]
 length(mixed_anc)
-# 689
+# 692
 # High heterozygosity rate (after correcting for ancestry) or high missing rate
 highHet_or_missing <- ukb_exc$eid[which(ukb_exc$`Genetic relatedness exclusions` == 2)]
 length(highHet_or_missing)
-# 838
+# 840
 
 ##Outliers for heterozygosity or missing rate
 
 HetoMiss_outliers <- ukb_exc$eid[which(!is.na(ukb_exc$`Outliers for heterozygosity or missing rate`))]
 length(HetoMiss_outliers)
-# 963
+# 968
 
 all_exc <- list(`Recommended genomic analysis exclusions` = poorheterozyg_or_missing,
-             `Participant self-declared as having a mixed ancestral background` = mixed_anc,
-             `High heterozygosity rate (after correcting for ancestry) or high missing rate` = highHet_or_missing,
-             `Outliers for heterozygosity or missing rate` = HetoMiss_outliers)
+                `Participant self-declared as having a mixed ancestral background` = mixed_anc,
+                `High heterozygosity rate (after correcting for ancestry) or high missing rate` = highHet_or_missing,
+                `Outliers for heterozygosity or missing rate` = HetoMiss_outliers,
+                `Discordant Sex` = sex_exc)
 exc_overlap <- sapply(all_exc,function(x) {
   sapply(all_exc, function(y) {
     round(mean(x %in% y) * 100, 2)
@@ -120,9 +137,10 @@ exc_overlapdf %>%
   ggtitle('Percent Overlap Across Exclusion Categories')+
   ylab('')+ xlab('')+ guides(color=F)
 ggsave('./results/SampleQC/Overlap_ExcCat.pdf', useDingbats=F, width = 17)
+ggsave('./results/SampleQC/Overlap_ExcCat.png', width = 17, device = 'png')
 recomm_exc <- unique(unname(unlist(all_exc)))
 length(recomm_exc)
-# 2849
+# 3697
 
 ## Heterozygosity
 eth_coding <- read_tsv('./data/raw/ukbb/datacoding/coding1001.tsv')
@@ -149,6 +167,8 @@ p1 <- ukb_exc %>%
   scale_color_manual(values = c("#99999933",'gray20'))
 ggsave('./results/SampleQC/Het_Miss_Plots.pdf', p1, width = 15, height = 10,
        useDingbats = F)  
+ggsave('./results/SampleQC/Het_Miss_Plots.png', p1, width = 15, height = 10,
+       device = 'png')  
 
 ## Exclude all of these
 
@@ -158,7 +178,7 @@ write_tsv(recomm_exc_df,
 
 ukb_exc <- ukb_exc[!ukb_exc$eid %in% recomm_exc,]
 dim(ukb_exc)
-# [1] 484666     13
+# [1] 484598     11
 
 # samples to include in the analysis:
 samplePassQC <- data.frame(eid = ukb_exc$eid)
