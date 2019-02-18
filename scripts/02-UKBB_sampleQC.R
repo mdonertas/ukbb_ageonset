@@ -119,6 +119,7 @@ all_exc <- list(`Recommended genomic analysis exclusions` = poorheterozyg_or_mis
                 `High heterozygosity rate (after correcting for ancestry) or high missing rate` = highHet_or_missing,
                 `Outliers for heterozygosity or missing rate` = HetoMiss_outliers,
                 `Discordant Sex` = sex_exc)
+saveRDS(all_exc,'./data/processed/ukbb/all_exclusions.rds')
 exc_overlap <- sapply(all_exc,function(x) {
   sapply(all_exc, function(y) {
     round(mean(x %in% y) * 100, 2)
@@ -141,6 +142,21 @@ ggsave('./results/SampleQC/Overlap_ExcCat.png', width = 17, device = 'png')
 recomm_exc <- unique(unname(unlist(all_exc)))
 length(recomm_exc)
 # 3697
+
+library(pheatmap)
+newnames <- setNames(c('Rec. Exclusions','Mixed Ancestry','High hetero / missing','Hetero / missing outliers','Discordant Sex'),colnames(exc_overlap))
+exc_overlap2 <- exc_overlap
+colnames(exc_overlap2) <- unname(newnames[colnames(exc_overlap2)])
+rownames(exc_overlap2) <- unname(newnames[rownames(exc_overlap2)])
+pheatmap(exc_overlap2, cellwidth = 25, cellheight = 25, number_format = "%.2f",
+         display_numbers = T, color = RColorBrewer::brewer.pal(8,'Oranges')[-8],
+         file = './results/SampleQC/Overlap_ExcCat_Heatmap.pdf')
+pheatmap(exc_overlap2, cellwidth = 25, cellheight = 25, number_format = "%.2f",
+         display_numbers = T, color = RColorBrewer::brewer.pal(8,'Oranges')[-8],
+         file = './results/SampleQC/Overlap_ExcCat_Heatmap.png')
+
+mean(HetoMiss_outliers %in% poorheterozyg_or_missing)
+mean(poorheterozyg_or_missing %in% HetoMiss_outliers)
 
 ## Heterozygosity
 eth_coding <- read_tsv('./data/raw/ukbb/datacoding/coding1001.tsv')
