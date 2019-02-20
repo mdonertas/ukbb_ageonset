@@ -31,6 +31,7 @@ ukbb <- setDF(fread('./data/raw/ukbb/ukb10904.csv',
                     select = fields$fields,
                     col.names = fields$description)) %>%
   filter(eid %in% samplestouse$eid)
+dim(ukbb)
 
 system('mkdir -p data/processed/traits_clean')
 saveRDS(ukbb, './data/processed/traits_clean/traitData_baseline.rds')
@@ -125,3 +126,71 @@ rm(ukbb_srCancer.cancers, ukbb_srCancer.age)
 
 saveRDS(ukbb_srCancer, './data/processed/traits_clean/SRcancer_baseline.rds')
 write_tsv(ukbb_srCancer, './data/processed/traits_clean/SRcancer_baseline.tsv')
+
+traits <- readRDS('./data/processed/traits_clean/traitData_baseline.rds') %>%
+  mutate(Sex = c('Female','Male')[Sex+1])%>%
+  mutate(BMI = Weight/((`Standing height`/100)^2))
+traits[traits==-1 | traits ==-3] <- NA
+
+traits$`Parent Min Age at Death` <- traits %>%
+  select(`Mother's age at death`, `Father's age at death`) %>%
+  apply(.,1,function(x){
+    xx=min(x[!is.na(x)])
+    ifelse(xx==Inf,NA,xx)
+  })
+traits$`Parent Max Age at Death` <- traits %>%
+  select(`Mother's age at death`, `Father's age at death`) %>%
+  apply(.,1,function(x){
+    xx=max(x[!is.na(x)])
+    ifelse(xx==-Inf,NA,xx)
+  })
+traits$`Parent Avg Age at Death` <- traits %>%
+  select(`Mother's age at death`, `Father's age at death`) %>%
+  apply(.,1,function(x){
+    xx=mean(x[!is.na(x)])
+    ifelse(is.nan(xx),NA,xx)
+  })
+
+SRdisease_np <- readRDS('./data/processed/traits_clean/SRdisease_baseline.rds')
+traits <- SRdisease_np%>%
+  group_by(eid)%>%
+  summarise(nSRdisease=length(unique(Disease)))%>%
+  right_join(traits)
+SRcancer <- readRDS('./data/processed/traits_clean/SRcancer_baseline.rds')
+traits <- SRcancer%>%
+  group_by(eid)%>%
+  summarise(nSRcancer=length(unique(Cancer)))%>%
+  right_join(traits)
+SRdisease_np$Age[SRdisease_np$Age %in% c(-1,-3)]=NA
+SRcancer$Age[SRcancer$Age %in% c(-1,-3)]=NA
+disCoding <- read_tsv('./data/raw/ukbb/datacoding/coding6.tsv')
+
+library(igraph)
+disTree <- graph_from_data_frame(select(disCoding,parent_id,node_id),directed = T)
+
+disDat <- lapply(setdiff(V(disTree)$name,'0'),function(nodex){
+  print(nodex)
+  childs <- subcomponent(disTree,v=nodex,mode='out')$name
+  nodeinfo <- filter(disCoding,node_id==nodex)
+  nodedat <- SRdisease_np %>%
+    filter(node_id %in% childs) %>%
+    group_by(eid) %>%
+    summarise(diseaseID=nodeinfo$coding,
+              Disease=nodeinfo$meaning,
+              node_id=nodex,
+              parent_id=nodeinfo$parent_id,
+              selectable=nodeinfo$selectable,
+              Age=min(Age,na.rm=T))
+  nodedat$Age[nodedat$Age==Inf]=NA
+  return(nodedat)
+})
+SRdisease <- reshape2::melt(disDat,id.vars=colnames(disDat[[1]]))%>%
+  select(-L1)
+saveRDS(SRdisease,'./data/processed/traits_clean/SRdisease_baseline_propagated.rds')
+
+traits <- SRdisease%>%
+  group_by(eid)%>%
+  summarise(nSRdiseaseProp=length(unique(Disease)))%>%
+  right_join(traits)
+
+saveRDS(traits, './data/processed/traits_clean/traitData_baseline_additions.rds')
