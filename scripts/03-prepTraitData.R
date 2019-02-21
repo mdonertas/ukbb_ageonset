@@ -194,3 +194,33 @@ traits <- SRdisease%>%
   right_join(traits)
 
 saveRDS(traits, './data/processed/traits_clean/traitData_baseline_additions.rds')
+
+## after creating inplink_notin_bgen.fam using prepGWAS/02-removeFiles4bolt
+
+traits <- readRDS('./data/processed/traits_clean/traitData_baseline_additions.rds')
+SRdisease <- readRDS('./data/processed/traits_clean/SRdisease_baseline.rds')
+SRdisease_prop <- readRDS('./data/processed/traits_clean/SRdisease_baseline_propagated.rds')
+SRcancer <- readRDS('./data/processed/traits_clean/SRcancer_baseline.rds')
+
+notinbgen <- read_delim('./data/processed/ukbb/gwas/remove/inplink_notin_bgen.fam', col_names = F, delim = ' ')
+
+mean(notinbgen$X1 %in% traits$eid)
+# [1] 0
+mean(notinbgen$X2 %in% traits$eid)
+# [1] 0
+
+mean(notinbgen$X1 %in% SRdisease$eid)
+# [1] 0
+mean(notinbgen$X2 %in% SRdisease$eid)
+# [1] 0
+
+mean(notinbgen$X1 %in% SRdisease_prop$eid)
+# [1] 0
+mean(notinbgen$X2 %in% SRdisease_prop$eid)
+# [1] 0
+
+mean(notinbgen$X1 %in% SRcancer$eid)
+# [1] 0
+mean(notinbgen$X2 %in% SRcancer$eid)
+# [1] 0
+
