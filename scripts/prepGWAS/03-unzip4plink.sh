@@ -1,3 +1,5 @@
+mkdir data/raw/ukbb/genotypes
+
 for i in {1..22}
 do
 cp /nfs/research1/ukbb/500K_release_v3/genotypes/EGAD00010001497/ukb_cal_chr$i\_v2.bed.gz /nfs/research1/thornton/ukbb_ageonset/data/raw/ukbb/genotypes/chr$i.bed.gz

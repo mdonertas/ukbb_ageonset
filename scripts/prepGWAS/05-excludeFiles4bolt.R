@@ -18,14 +18,14 @@ maf.exc=c()
 for(i in 1:22){
   maf.exc <- unique(c(maf.exc,(read_tsv(paste('./data/processed/ukbb/gwas/freq/chr',i,'.afreq',sep='')) %>%
                                  mutate(maf=ifelse(ALT_FREQS<0.5,ALT_FREQS,1-ALT_FREQS))%>%
-                                 filter(maf<=0.001))$ID))
+                                 filter(maf<0.01))$ID))
 }
 
 length(maf.exc)
-# [1] 73919
+# [1] 127969
 
 length(union(maf.exc,hwe.exc))
-# [1] 274729
+# [1] 314697
 
 data.frame(SNPID=maf.exc)%>%
   write_delim('./data/processed/ukbb/gwas/exclude/maf.txt',delim=' ', col_names = F)

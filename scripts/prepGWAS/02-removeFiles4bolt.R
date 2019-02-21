@@ -1,5 +1,5 @@
 savepath <- './data/processed/ukbb/gwas/remove/'
-
+system(paste('mkdir -p',savepath))
 library(tidyverse)
 # prep remove file for withdrawn:
 
@@ -15,7 +15,8 @@ withdrawn <- famx %>%
 
 withdrawn %>% write_delim(paste(savepath,'withdrawn.fam',sep=''),col_names = F)
 
-traits <- readRDS('./data/processed/traits_clean/traitData_baseline.rds')
+# prepare remove files for exclusions from QC
+traits <- readRDS('./data/processed/traits_clean/traitData_baseline_additions.rds')
 
 touse <- c(intersect(traits$eid,famx$X1),NA)
 
@@ -23,6 +24,8 @@ excluded <- famx %>%
   filter(!X1 %in%touse)
 
 excluded %>% write_delim(paste(savepath,'sampleQC_exc.fam',sep=''),col_names = F)
+
+# exclude those in plink but not in bgen
 
 samplex <- data.frame(ID_1=NA,ID_2=NA,missing=NA,sex=NA)
 for(x in list.files('./data/raw/ukbb/sample/',full.names = T)){
@@ -35,13 +38,16 @@ inplink_notin_bgen <- famx %>%
 
 inplink_notin_bgen %>% write_delim(paste(savepath,'inplink_notin_bgen.fam',sep=''),col_names = F)
 
+# file with all males
 
 males <- famx %>%
-  filter(X1 %in% filter(traits,Sex==1)$eid)
+  filter(X1 %in% filter(traits,Sex=="Male")$eid)
 
 males %>% write_delim(paste(savepath,'males.fam',sep=''),col_names = F)
 
+# file with all females
+
 females <- famx %>%
-  filter(X1 %in% filter(traits,Sex==0)$eid)
+  filter(X1 %in% filter(traits,Sex=="Female")$eid)
 
 females %>% write_delim(paste(savepath,'females.fam',sep=''),col_names = F)
