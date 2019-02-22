@@ -1,0 +1,8 @@
+mkdir -p ./data/processed/ukbb/gwas/bolt
+disIDs=$(head -1 ./data/processed/ukbb/gwas/pheno/phenoFile_noChar.pheno | grep -o '\bd\w*' | cut -d'd' -f2)
+
+for disID in $disIDs
+do
+echo $disID
+bsub -o /dev/null -n 16 -M 100000 -R "rusage[mem=32000]" bolt --bed=./data/raw/ukbb/genotypes/chr{1:22}.bed --bim=./data/raw/ukbb/genotypes/chr{1:22}.bim --fam=./data/raw/ukbb/genotypes/chr1.fam --remove=./data/processed/ukbb/gwas/remove/inplink_notin_bgen.fam --remove=./data/processed/ukbb/gwas/remove/sampleQC_exc.fam --remove=./data/processed/ukbb/gwas/remove/withdrawn.fam --exclude=./data/processed/ukbb/gwas/exclude/hwe.txt --exclude=./data/processed/ukbb/gwas/exclude/maf.txt --phenoFile=./data/processed/ukbb/gwas/pheno/phenoFile_noChar.pheno --phenoCol=d$disID --covarFile=./data/processed/ukbb/gwas/pheno/phenoFile_noChar.pheno --covarCol=Sex --qCovarCol=Age --qCovarCol=BMI --covarCol=centre --covarCol=ethnicity --covarCol=batch --qCovarCol=ukbb_pc{1:20} --covarMaxLevels=120 --LDscoresFile=../melike/softw/BOLT-LMM_v2.3.2/tables/LDSCORE.1000G_EUR.tab.gz --geneticMapFile=../melike/softw/BOLT-LMM_v2.3.2/tables/genetic_map_hg19_withX.txt.gz  --lmmForceNonInf --numThreads=16 --statsFile=./data/processed/ukbb/gwas/bolt/a$disID.stats --bgenFile=../../ukbb/500K_release_v3/imputed/EGAD00010001474/ukb_imp_chr{1:22}_v3.bgen --bgenMinMAF=1e-2 --bgenMinINFO=0.5 --sampleFile=./data/raw/ukbb/sample/ukb30688_imp_chr1_v3_s487378.sample --statsFileBgenSnps=./data/processed/ukbb/gwas/bolt/a$disID.imp.stats --verboseStats
+done
