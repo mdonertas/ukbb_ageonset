@@ -224,3 +224,35 @@ mean(notinbgen$X1 %in% SRcancer$eid)
 mean(notinbgen$X2 %in% SRcancer$eid)
 # [1] 0
 
+## addition on 25 februrary
+## we add the column "Date of attending assessment centre" to the traits data.
+
+library(tidyverse)
+library(data.table)
+ukbfields <- read_tsv('./data/processed/ukbb/helperfiles/ukbfields.tsv')  
+
+## read data
+
+fields <- ukbfields %>%
+  filter(description %in% c('eid', 'Date of attending assessment centre', 'Date of death')) %>%
+  mutate(fields = as.character(fields)) %>%
+  filter(visit == 0)
+
+traits <- readRDS('./data/processed/traits_clean/traitData_baseline_additions.rds')
+
+ukbb <- setDF(fread('./data/raw/ukbb/ukb10904.csv',
+                    select = fields$fields,
+                    col.names = fields$description)) %>%
+  filter(eid %in% traits$eid)
+
+ukbb$`Date of attending assessment centre` = as.Date(ukbb$`Date of attending assessment centre`)
+ukbb$`Date of death`[which(ukbb$`Date of death` =="")] = NA
+ukbb$`Date of death` = as.Date(ukbb$`Date of death`)
+
+traits <- traits %>%left_join(ukbb)
+
+traits <- traits %>%
+  mutate("Age when last person died" = `Age when attended assessment centre` + ((max(`Date of death`, na.rm = T) - `Date of attending assessment centre`) / 365)) 
+
+traits %>%
+  saveRDS('./data/processed/traits_clean/traitData_baseline_additions2.rds')
