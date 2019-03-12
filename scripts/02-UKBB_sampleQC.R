@@ -119,7 +119,7 @@ all_exc <- list(`Recommended genomic analysis exclusions` = poorheterozyg_or_mis
                 `High heterozygosity rate (after correcting for ancestry) or high missing rate` = highHet_or_missing,
                 `Outliers for heterozygosity or missing rate` = HetoMiss_outliers,
                 `Discordant Sex` = sex_exc)
-saveRDS(all_exc,'./data/processed/ukbb/all_exclusions.rds')
+saveRDS(all_exc,'./data/processed/ukbb/sampleQC/all_exclusions.rds')
 exc_overlap <- sapply(all_exc,function(x) {
   sapply(all_exc, function(y) {
     round(mean(x %in% y) * 100, 2)
