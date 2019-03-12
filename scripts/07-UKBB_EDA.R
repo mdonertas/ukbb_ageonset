@@ -1,19 +1,13 @@
-library(tidyverse)
-library(ggpubr)
-library(ggridges)
-theme_set(theme_pubr(base_size = 10, legend = 'bottom'))
-pntnorm <- (1/0.352777778)
-traits <- readRDS('./data/processed/traits_clean/traitData_baseline_additions2.rds')
-sexcolors <- setNames(c('rosybrown4', 'slategray'), c('Female', 'Male'))
+source('./scripts/00-setup.R')
 
-colnames(traits)
+traits <- readRDS('./data/processed/traits_clean/traitData_baseline_additions2.rds')
 
 sexdistrib <- traits %>%
   group_by(Sex) %>%
   summarise(n = length(unique(eid)))%>%
   ggplot(aes(x = Sex, y = n)) +
   geom_bar(stat = 'identity', aes(fill = Sex)) +
-  geom_label(aes(label = n), size = 8 / pntnorm, vjust = 1, nudge_y = -2000) +
+  geom_label(aes(label = scales::comma(n)), size = 8 / pntnorm, vjust = 1, nudge_y = -2000) +
   scale_fill_manual(values = sexcolors[unique(traits$Sex)]) +
   ylab('Number of participants') +
   xlab('') +
@@ -33,6 +27,12 @@ traits %>%
   select(`Age when attended assessment centre`) %>%
   mutate(age = `Age when attended assessment centre`) %>%
   summarise(min = min(age), max = max(age), median = median(age))
+
+# # A tibble: 2 x 4
+# Sex      min   max median
+# <chr>  <dbl> <dbl>  <dbl>
+# 1 Female    39    71     57
+# 2 Male      37    73     58
 
 agedistrib_bysex <- traits %>%
   select(`Age when attended assessment centre`, Sex) %>%
@@ -246,7 +246,7 @@ parentAgeatDeath <- traits %>%
   ggplot(aes(x = Type, y= `Age at death`)) +
   geom_violin(fill='gray60')+
   geom_boxplot(width=0.05,outlier.shape = NA)+
-  ggtitle(paste('Parent Age at Death\nN=',annotdf$n,sep=''))+
+  ggtitle(paste('Parent Age at Death\nN=',scales::comma(annotdf$n),sep=''))+
   xlab('')
 ggsave('./results/UKBB_EDA/Parent_Age_at_death.pdf', parentAgeatDeath, useDingbats=F, height = 6,width = 6, units = "cm")
 ggsave('./results/UKBB_EDA/Parent_Age_at_death.png', parentAgeatDeath, height = 6,width = 6, units = "cm")
@@ -274,8 +274,9 @@ ggsave('./results/UKBB_EDA/NSRdisease.pdf', NSRdisease, useDingbats=F, height = 
 ggsave('./results/UKBB_EDA/NSRdisease.png', NSRdisease, height = 7,width = 6, units = "cm")
 
 sum(!is.na(traits$nSRdiseaseProp))
+# [1] 362772
 mean(!is.na(traits$nSRdiseaseProp))
-
+# [1] 0.748604
 sum(is.na(traits$nSRdiseaseProp))
 # [1] 121826
 
@@ -290,6 +291,7 @@ ggsave('./results/UKBB_EDA/nSRcancer.pdf', NSRcancer, useDingbats=F, height = 6,
 ggsave('./results/UKBB_EDA/nSRcancer.png', NSRcancer, height = 6,width = 7, units = "cm")
 
 sum(!is.na(traits$nSRcancer))
+# [1] 39910
 
 height <- traits %>%
   select(Sex, `Standing height`) %>%
@@ -330,6 +332,7 @@ menarche <- traits %>%
   ggplot(aes(x= `Age when periods started (menarche)`)) +
   geom_bar(aes(fill = Sex)) + 
   scale_fill_manual(values = sexcolors[unique(traits$Sex)]) + 
+  scale_y_continuous(labels = scales::comma) +
   ylab('Number of participants') + xlab('Age when periods started') + guides(fill=F)
 ggsave('./results/UKBB_EDA/menarche.pdf', menarche  , useDingbats=F, height = 6,width = 6, units = "cm")
 ggsave('./results/UKBB_EDA/menarche.png', menarche  , height = 6, width = 6, units = "cm")
@@ -338,6 +341,14 @@ traits %>%
   select( `Age when periods started (menarche)`) %>%
   summary()
 
+# Age when periods started (menarche)
+# Min.   : 5.00                      
+# 1st Qu.:12.00                      
+# Median :13.00                      
+# Mean   :12.97                      
+# 3rd Qu.:14.00                      
+# Max.   :25.00                      
+# NA's   :229996 
 
 menopause <- traits %>%
   select(Sex, `Age at menopause (last menstrual period)`) %>%
@@ -345,6 +356,7 @@ menopause <- traits %>%
   ggplot(aes(x= `Age at menopause (last menstrual period)`)) +
   geom_bar(aes(fill = Sex)) + 
   scale_fill_manual(values = sexcolors[unique(traits$Sex)]) + 
+  scale_y_continuous(labels = scales::comma) +
   ylab('Number of participants') + xlab('Age at menopause') + guides(fill=F)
 ggsave('./results/UKBB_EDA/menopause.pdf', menopause  , useDingbats=F, height = 6,width = 6, units = "cm")
 ggsave('./results/UKBB_EDA/menopause.png', menopause  , height = 6, width = 6, units = "cm")
@@ -352,7 +364,14 @@ ggsave('./results/UKBB_EDA/menopause.png', menopause  , height = 6, width = 6, u
 traits %>%
   select(`Age at menopause (last menstrual period)`) %>%
   summary()
-
+# Age at menopause (last menstrual period)
+# Min.   :18.0                            
+# 1st Qu.:48.0                            
+# Median :50.0                            
+# Mean   :49.7                            
+# 3rd Qu.:53.0                            
+# Max.   :68.0                            
+# NA's   :335673
 deathsinfamily = traits %>%
   select(Sex, `Non-accidental death in close genetic family`) %>%
   na.omit() %>%
@@ -373,8 +392,8 @@ p1 <- ggarrange(sexdistrib,
           height, weight, BMI,
           legend = 'bottom',
           nrow = 2, ncol=3, labels = 'auto', common.legend = T, align = 'hv')
-ggsave('./results/UKBB_EDA/figure1.pdf', p1, useDingbats=F, height = 14,width = 18, units = "cm")
-ggsave('./results/UKBB_EDA/figure1.png', p1, height = 14,width = 18, units = "cm")
+ggsave('./results/UKBB_EDA/figure1.pdf', p1, useDingbats=F, height = 13,width = 18, units = "cm")
+ggsave('./results/UKBB_EDA/figure1.png', p1, height = 13,width = 18, units = "cm")
 
 p2 <- ggarrange(healthratePlot, healthsatisfactionPlot, smokingPlot, alcoholPlot,
           facialagingPlot, deathsinfamily,common.legend = T, legend = 'bottom',
@@ -388,10 +407,8 @@ ggsave('./results/UKBB_EDA/figure3.png', p3, height =6,width = 18, units = "cm")
 
 p4 <- ggarrange(numMed_Op, NSRcancer, nrow=1,ncol=2,widths = c(2,1.2), common.legend = T, legend = 'bottom', labels = c('a','b'))
 
-ggsave('./results/UKBB_EDA/figure4.pdf', p4, useDingbats=F, height = 10,width = 18, units = "cm")
-ggsave('./results/UKBB_EDA/figure4.png', p4, height =10,width = 18, units = "cm")
-
-traits$`Facial ageing`
+ggsave('./results/UKBB_EDA/figure4.pdf', p4, useDingbats=F, height = 7,width = 18, units = "cm")
+ggsave('./results/UKBB_EDA/figure4.png', p4, height =7,width = 18, units = "cm")
 
 cotraits <- traits[,c(2:3, 5:6, 10, 12, 15, 16, 18:24, 26:30)] %>%
   mutate(Sex=as.numeric(as.factor(Sex))) %>%
@@ -410,4 +427,16 @@ pheatmap::pheatmap(cox, cellwidth = 22, cellheight = 22, display_numbers = T,
                    breaks = seq(-1,1,length.out = 20),
                    color = colorRampPalette(c('#2166AC','gray90','#B2182B'))(19),
                    filename = './results/UKBB_EDA/correlations.png',
+                   number_format = '%.2f')
+cox_trimmed=cox
+cox_trimmed[abs(cox)<0.2]=0
+pheatmap::pheatmap(cox_trimmed, cellwidth = 22, cellheight = 22, display_numbers = T,
+                   breaks = seq(-1,1,length.out = 20),
+                   color = colorRampPalette(c('#2166AC','gray90','#B2182B'))(19),
+                   filename = './results/UKBB_EDA/correlations_trimmed_below02.pdf',
+                   number_format = '%.2f')
+pheatmap::pheatmap(cox_trimmed, cellwidth = 22, cellheight = 22, display_numbers = T,
+                   breaks = seq(-1,1,length.out = 20),
+                   color = colorRampPalette(c('#2166AC','gray90','#B2182B'))(19),
+                   filename = './results/UKBB_EDA/correlations_trimmed_below02.png',
                    number_format = '%.2f')

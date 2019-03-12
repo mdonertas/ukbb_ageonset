@@ -1,0 +1,6 @@
+library(tidyverse)
+library(ggpubr)
+library(ggridges)
+theme_set(theme_pubr(base_size = 10, legend = 'bottom'))
+pntnorm <- (1/0.352777778)
+sexcolors <- setNames(c('rosybrown4', 'slategray'), c('Female', 'Male'))
