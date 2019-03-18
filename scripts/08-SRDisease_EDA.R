@@ -124,25 +124,3 @@ ggsave('./results/UKBB_disease_EDA/figure1.pdf', p1,  useDingbats=F, height=18, 
 ggsave('./results/UKBB_disease_EDA/figure1.png', p1, height=18, width = 18, units = 'cm')
 
 
-# disPrev <- prevDF %>%
-#   mutate(mPrev = log10(1000 * mPrev), fPrev = log10(1000 * fPrev)) %>%
-#   mutate(mPrev = ifelse(is.na(mPrev),0,mPrev),fPrev = ifelse(is.na(fPrev),0,fPrev),
-#          sexSpec = ((mPrev < 0.001) | (fPrev < 0.001)) & (nCases > 2000)) %>%
-#   mutate(sexSpecName = sapply(strsplit(ifelse ( sexSpec == T, Disease, NA),'[(]'),function(x)x[1])) %>%
-#   ggplot(aes(x = mPrev, y = fPrev)) +
-#   annotate('rect',xmin = log10(1), xmax = Inf, ymin = log10(1), ymax = Inf, fill = 'gray50', alpha = 0.3) + 
-#   geom_vline(xintercept = log10(1), linetype = 'dashed', color = 'darkred') + 
-#   geom_hline(yintercept = log10(1), linetype = 'dashed', color = 'darkred') +
-#   geom_point(aes(alpha = c('<2,000','>2,000')[1+(nCases > 2000)])) +
-#   geom_text_repel(aes(label = sexSpecName), size = 6 / pntnorm, box.padding = 0) +
-#   scale_alpha_manual('# Cases', values = c(0.2,0.4)) +
-#   geom_smooth(method = 'lm') +
-#   scale_x_continuous(breaks = log10(c(1,10,100,300)), labels = c(1,10,50,300)) +
-#   scale_y_continuous(breaks = log10(c(1,10,100,300)), labels = c(1,10,50,300)) +
-#   xlab('Number of Cases in 1,000 Males') + 
-#   ylab('Number of Cass in 1,000 Females') + 
-#   annotate('text',x = log10(0.003), y = log10(400), label = 'Female-specific', color = sexcolors['Female'], hjust = 0) + 
-#   annotate('text',y = log10(0.003), x = log10(400), label = 'Male-specific', color = sexcolors['Male'], hjust = 1) +
-#   coord_equal(xlim = c(log10(0.003),log10(400)),ylim = c(log10(0.003),log10(400))) +
-#   theme(legend.key.size = unit(0.1,'cm'))
-
