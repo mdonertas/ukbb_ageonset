@@ -1,15 +1,12 @@
 source('./scripts/00-setup.R')
-library(igraph)
 traits <- readRDS('./data/processed/traits_clean/traitData_baseline_additions2.rds')
-disCoding <- read_tsv('./data/raw/ukbb/datacoding/coding6.tsv')
-disTree <- graph_from_data_frame(select(disCoding,parent_id,node_id),directed = T)
 igraph_options(plot.layout=layout_as_tree)
 SRdisease <- readRDS('./data/processed/traits_clean/SRdisease_baseline_propagated.rds')
 prevDF = readRDS('./data/processed/traits_clean/SRdisease_prop_prevdf.rds')
 disSet <- readRDS('./data/processed/traits_clean/SRdiseaseSet.rds')
 
 # system('mkdir -p ./results/selectedDisease_EDA')
-selectedNodes <- filter(disCoding,meaning%in%disSet$Disease)$node_id
+selectedNodes <- filter(disCoding,meaning%in%disSet$Disease)$meaning
 pdf('./results/selectedDisease_EDA/disTree_selected.pdf',width=20,height = 5)
 plot(disTree,
      vertex.size=c(0.75,0.75)[1+(V(disTree)$name%in%selectedNodes)],
@@ -57,9 +54,11 @@ disPrev <- lmxdat %>%
 ggsave('./results/selectedDisease_EDA/disPrevScatter.pdf', disPrev,  useDingbats=F, height=8, width = 8, units = 'cm')
 ggsave('./results/selectedDisease_EDA/disPrevScatter.png', disPrev, height=8, width = 8, units = 'cm')
 
-SRdisease_selected <- SRdisease %>%
-  filter(Disease %in% disSet$Disease)
-saveRDS(SRdisease_selected,'./data/processed/traits_clean/SRdisease_baseline_propagated_selected.rds')
+# SRdisease_selected <- SRdisease %>%
+#   filter(Disease %in% disSet$Disease)
+# saveRDS(SRdisease_selected,'./data/processed/traits_clean/SRdisease_baseline_propagated_selected.rds')
+
+SRdisease_selected <- readRDS('./data/processed/traits_clean/SRdisease_baseline_propagated_selected.rds')
 
 xx <- traits %>% 
   select(eid, Sex) %>%
@@ -70,7 +69,8 @@ xx <- traits %>%
   ungroup()
 
 summary(xx$nSRdiseaseProp)
-
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 1.000   3.000   5.000   5.407   7.000  46.000 
 wilcox.test(xx$nSRdiseaseProp~as.factor(xx$Sex))
 
 # Wilcoxon rank sum test with continuity correction
@@ -100,36 +100,19 @@ p1 <- ggarrange(numDiseases_perInd, disPrev, ncol = 2, nrow = 1, labels = 'auto'
 ggsave('./results/selectedDisease_EDA/figure1.pdf', p1,  useDingbats=F, height=9, width = 18, units = 'cm')
 ggsave('./results/selectedDisease_EDA/figure1.png', p1, height=9, width = 18, units = 'cm')
 
-disCoding <- read_tsv('./data/raw/ukbb/datacoding/coding6.tsv')
-nms=setNames(disCoding$meaning,disCoding$node_id)
-nms=c(nms,`0`='Top')
-nmsdf=data.frame(node=unname(nms[as.character(disCoding$node_id)]),parent=unname(nms[as.character(disCoding$parent_id)]))
-disTree <- graph_from_data_frame(select(nmsdf,parent,node),directed = T)
-nodelabels=setNames(disCoding$meaning,disCoding$node_id)
-disTreecl <- reshape::melt(sapply(neighbors(disTree,'Top')$name,function(nm){
-  subcomponent(disTree,nm,'out')$name
-}))%>%
-  rename(node=value,
-         cluster=L1)
-
-disTreecl=setNames(disTreecl$cluster,disTreecl$node)
-
 disset <- disSet$Disease
-disTree <- induced_subgraph(disTree,c('Top',disset))
-disTreecl=factor(unname(disTreecl[V(disTree)$name]))
+disTreesub <- induced_subgraph(disTree,c('Top',disset))
+disTreeclsub=factor(unname(disTreecl[V(disTreesub)$name]))
+l <- layout_as_tree(disTreesub)
+colsx <- discatcolors[as.character(disTreeclsub)]
+nms = V(disTreesub)$name
+nms[!nms%in%disTree_level1]=NA
+colsx2 <- discatcolors[na.omit(nms)]
+names(colsx2)=sapply(strsplit(names(colsx2),'/'),function(x)x[1])
+colsx[is.na(colsx)] = 'gray50'
 
-level1=neighbors(disTree,'Top','out')$name
-net=disTree
-l <- layout_as_tree(net)
-colsx <- c(brewer.pal(8,'Dark2'),brewer.pal(8,'Set1'))[as.numeric(disTreecl)]
-colsx[is.na(colsx)]='black'
-nms = V(disTree)$name
-nms[!nms%in%level1]=NA
-nms=sapply(strsplit(nms,'/'),function(x)x[1])
-colsx2 <- setNames(colsx,nms)
-colsx2 <- colsx2[!is.na(names(colsx2))]
 pdf('./results/selectedDisease_EDA/disTree_selected2.pdf',width=18,height = 5,useDingbats = F)
-plot(disTree2,
+plot(disTreesub,
      layout=l,
      vertex.color=colsx,
      vertex.size=3,
@@ -142,4 +125,85 @@ plot(disTree2,
 legend('bottom',col = colsx2,legend = names(colsx2),pch = 19, cex = 1, horiz = T, bty = 'n')
 dev.off()
 
-unique(colsx)
+agestrNumdis_5 <- traits %>% 
+  select(eid, Sex) %>%
+  right_join(SRdisease_selected) %>%
+  mutate(AgeGr = cut(Age, breaks = seq(0,65,5))) %>%
+  group_by(eid, Sex, AgeGr) %>%
+  summarise(numDisease = length(unique(Disease))) %>%
+  ungroup() %>%
+  group_by(Sex, AgeGr) %>%
+  summarise(Mean = mean(numDisease),
+            Maximum = max(numDisease)) %>%
+  na.omit()  %>%
+  gather(key = 'Type', value = 'Number of Diseases', -Sex, -AgeGr)
+
+agestrNumdis_5p <- agestrNumdis_5 %>%
+  mutate(Type = factor(Type, levels = c('Mean','Maximum'))) %>%
+  ggplot(aes(x = AgeGr, color = Sex, y = `Number of Diseases`, group = Sex)) +
+  geom_point(size = 2) + geom_line(size = 2) +
+  scale_color_manual("Sex", values=sexcolors[c('Female','Male')]) + 
+  xlab('Age Group') +
+  facet_wrap(~Type, scales = 'free_y', ncol = 1, nrow = 3)+
+  theme(axis.text.x = element_text(angle=90))
+
+ggsave('./results/selectedDisease_EDA/agestrNumdis_5.pdf', agestrNumdis_5p,  useDingbats=F, height=12, width = 8, units = 'cm')
+ggsave('./results/selectedDisease_EDA/agestrNumdis_5.png', agestrNumdis_5p, height=12, width = 8, units = 'cm')
+
+agestrNumdis_10 <- traits %>% 
+  select(eid, Sex) %>%
+  right_join(SRdisease_selected) %>%
+  mutate(AgeGr = cut(Age, breaks = seq(0,70,10))) %>%
+  group_by(eid, Sex, AgeGr) %>%
+  summarise(numDisease = length(unique(Disease))) %>%
+  ungroup() %>%
+  group_by(Sex, AgeGr) %>%
+  summarise(Mean = mean(numDisease),
+            Maximum = max(numDisease)) %>%
+  na.omit()  %>%
+  gather(key = 'Type', value = 'Number of Diseases', -Sex, -AgeGr)
+
+agestrNumdis_10p <- agestrNumdis_10 %>%
+  mutate(Type = factor(Type, levels = c('Mean','Maximum'))) %>%
+  ggplot(aes(x = AgeGr, color = Sex, y = `Number of Diseases`, group = Sex)) +
+  geom_point(size = 2) + geom_line(size = 2) +
+  scale_color_manual("Sex", values=sexcolors[c('Female','Male')]) + 
+  xlab('Age Group') +
+  facet_wrap(~Type, scales = 'free_y', ncol = 1, nrow = 3)+
+  theme(axis.text.x = element_text(angle=90))
+
+ggsave('./results/selectedDisease_EDA/agestrNumdis_10.pdf', agestrNumdis_10p,  useDingbats=F, height=12, width = 8, units = 'cm')
+ggsave('./results/selectedDisease_EDA/agestrNumdis_10.png', agestrNumdis_10p, height=12, width = 8, units = 'cm')
+
+cats <- unique(disTreecl)
+catsp_age <- lapply(cats, function(cat){
+  catdis <- names(disTreecl)[which(disTreecl %in% cat)]
+  SRdisease_selected %>%
+    filter(Disease%in%catdis) %>%
+    left_join(select(traits,eid,Sex)) %>%
+    mutate(AgeGr = cut(Age, breaks = seq(0,70,10))) %>%
+    group_by(eid, Sex, AgeGr) %>%
+    summarise(numDisease = length(unique(Disease))) %>%
+    ungroup() %>%
+    group_by(Sex, AgeGr) %>%
+    summarise(Mean = mean(numDisease),
+              Maximum = max(numDisease)) %>%
+    na.omit()  %>%
+    gather(key = 'Type', value = 'Number of Diseases', -Sex, -AgeGr) %>%
+    ungroup() 
+})
+catsp_age <- reshape2::melt(catsp_age, id.vars = colnames(catsp_age[[1]])) 
+catsp_age$Category <- cats[catsp_age$L1]
+
+catsp_age_p <- catsp_age %>%
+  mutate(Type = factor(Type, levels = c('Mean','Maximum'))) %>%
+  filter(Type == 'Mean') %>%
+  ggplot(aes(x = AgeGr, color = Sex, y = `Number of Diseases`, group = Sex)) +
+  geom_point(size = 2) + geom_line(size = 2) +
+  scale_color_manual("Sex", values=sexcolors[c('Female','Male')]) + 
+  xlab('Age Group') + ylab('Averange Number of Diseases')+
+  facet_wrap(~Category, scales = 'free_y', ncol = 3) +
+  theme(axis.text.x = element_text(angle=90))
+
+ggsave('./results/selectedDisease_EDA/age_cat_strdis.pdf', catsp_age_p,  useDingbats=F, height=15, width = 18, units = 'cm')
+ggsave('./results/selectedDisease_EDA/age_cat_strdis.png', catsp_age_p, height=15, width = 18, units = 'cm')
