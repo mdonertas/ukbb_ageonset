@@ -111,6 +111,8 @@ colsx2 <- discatcolors[na.omit(nms)]
 names(colsx2)=sapply(strsplit(names(colsx2),'/'),function(x)x[1])
 colsx[is.na(colsx)] = 'gray50'
 
+script <- RCurl::getURL("https://bitbucket.org/dominikfroehlich/legend2/raw/ee925d81a789534bedf4fdcbfe65640f95e3c72f/legend2/legend2.r", ssl.verifypeer = FALSE)
+eval(parse(text = script))
 pdf('./results/selectedDisease_EDA/disTree_selected2.pdf',width=18,height = 5,useDingbats = F)
 plot(disTreesub,
      layout=l,
@@ -122,7 +124,7 @@ plot(disTreesub,
      edge.arrow.size=0.2,
      edge.color='gray80',
      vertex.color=c('gray70'))
-legend('bottom',col = colsx2,legend = names(colsx2),pch = 19, cex = 1, horiz = T, bty = 'n')
+legend2('bottom',col = colsx2,legend = names(colsx2),pch = 19, cex = 1, horiz = T, bty = 'n')
 dev.off()
 
 agestrNumdis_5 <- traits %>% 
