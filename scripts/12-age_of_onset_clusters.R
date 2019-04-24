@@ -347,3 +347,29 @@ px = fviz_dend(hc, # Cut in four groups
   ggtitle('')
 ggsave('./results/ageonset/clusterColoredCat.pdf',px,width = 50,height = 20, useDingbats = F, units = 'cm')
 ggsave('./results/ageonset/clusterColoredCat.png',px,width = 50,height = 20, units = 'cm')
+
+for ( k in 2:25){
+overlapdat <- data.frame(Disease = names(cutree(hc,k)), AgeOnsetCluster = as.factor(unname(cutree(hc,k)))) %>%
+  left_join(data.frame(Disease = names(disTreecl), Category = unname(disTreecl))) %>%
+  group_by(AgeOnsetCluster, Category) %>%
+  summarise(numDis = length(unique(Disease))) %>%
+  spread(Category,numDis, fill = 0) %>%
+  as.data.frame()
+rownames(overlapdat) = overlapdat$AgeOnsetCluster
+overlapdat$AgeOnsetCluster = NULL
+overlapdat = as.matrix(overlapdat)
+overlapdat = overlapdat[as.character(unique(cutree(hc,k)[hc$order])),]
+overlapdat = 100 * overlapdat / rowSums(overlapdat)
+pheatmap::pheatmap(overlapdat,
+                   cluster_rows = F,
+                   color = colorRampPalette(brewer.pal(8,'Oranges'))(max(overlapdat)),
+                   number_color = 'black', cellwidth = 20, cellheight = 20, 
+                   filename = paste('./results/ageonset/age_cat_overlap_k',k,'.pdf',sep=''),
+                   display_numbers = T, number_format = '%.0f', main = paste('k=',k,sep=''))
+pheatmap::pheatmap(overlapdat,
+                   cluster_rows = F,
+                   color = colorRampPalette(brewer.pal(8,'Oranges'))(max(overlapdat)),
+                   number_color = 'black', cellwidth = 20, cellheight = 20, 
+                   filename = paste('./results/ageonset/age_cat_overlap_k',k,'.png',sep=''),
+                   display_numbers = T, number_format = '%.0f', main = paste('k=',k,sep=''))
+}
