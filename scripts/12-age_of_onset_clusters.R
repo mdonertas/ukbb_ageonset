@@ -332,3 +332,18 @@ allsummarised2 <- sumx %>%
 
 ggsave('./results/ageonset/allsummarised2.pdf', allsummarised2, units = 'cm', width = 18, height = 8, useDingbats = F)
 ggsave('./results/ageonset/allsummarised2.png', allsummarised2, units = 'cm', width = 18, height = 8)
+
+
+px = fviz_dend(hc, # Cut in four groups
+            cex = 1.1, # label size
+            label_cols = unname(discatcolors[unname(disTreecl[hc$labels[hc$order]])]),
+            color_labels_by_k = F,
+            rect = F, # Add rectangle around groups
+            rect_fill = F)+
+  ylim(-1,0.4)+
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank())+
+  ylab('')+
+  ggtitle('')
+ggsave('./results/ageonset/clusterColoredCat.pdf',px,width = 50,height = 20, useDingbats = F, units = 'cm')
+ggsave('./results/ageonset/clusterColoredCat.png',px,width = 50,height = 20, units = 'cm')
