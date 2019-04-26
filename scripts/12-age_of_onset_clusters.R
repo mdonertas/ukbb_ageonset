@@ -1,4 +1,7 @@
 source('./scripts/00-setup.R')
+library(cluster)
+library(TSclust)
+
 # library(clustermq)
 # SRdisease <- readRDS('./data/processed/traits_clean/SRdisease_baseline_propagated.rds')
 # disAgeMat <- SRdisease %>%
@@ -153,110 +156,6 @@ pheatmap::pheatmap(medRate, cluster_cols = F,
                    filename = './results/ageonset/medAgeRate.png',
                    cellwidth = 1, cellheight = 10, show_colnames = F)
 
-library(dendextend)
-library(ggdendro)
-library(factoextra)
-library(jpeg)
-library(RFRlib)
-hc <- hclust(dist(medRate))
-dend <- as.dendrogram(hc)
-owd=getwd()
-agedist = medRate
-for(hcut in 2:25){
-  system(paste('mkdir -p /nfs/research1/thornton/ukbb_ageonset/results/ageonset/',hcut,'cluster',sep=''))
-  setwd(paste('/nfs/research1/thornton/ukbb_ageonset/results/ageonset/',hcut,'cluster',sep=''))
-  print(hcut)
-  if(hcut<=1){
-    discl=cutree(hc,h=hcut)
-  } else if(hcut>1){
-    discl=cutree(hc,k=hcut)
-  }
-  
-  par(mar=c(20, 4, 4, 2) + 0.1)
-  colsx=c(brewer.pal(8,'Dark2'),brewer.pal(8,'Set2'),brewer.pal(8,'Set1'))[1:(luniq(discl))]
-  
-  dend <- dend %>% 
-    set("branches_k_color", k = luniq(discl),
-        value = colsx) %>% 
-    set("labels_colors", k = luniq(discl),
-        value = colsx) %>% 
-    set("branches_lwd", 2)
-  agedf <- lapply(unique(discl[hc$order]),function(i){
-    dismat <- agedist[names(which(discl==i)),]
-    data.frame(mnsx=if(class(dismat)=='matrix'){colMeans(dismat)}else{dismat},
-               sdx=if(class(dismat)=='matrix'){apply(dismat,2,sd)}else{rep(0,length(seq(0,64,by=1)))},
-               cl=i,
-               numDiseases=luniq(names(which(discl==i))),
-               age=seq(0,64,1))
-  })
-  agedf=reshape2::melt(agedf,id.vars=colnames(agedf[[1]]))%>%
-    rename(clorder=L1)
-  names(colsx)=unique(discl[hc$order])
-  agedistplots <- lapply(unique(agedf$clorder),function(i){
-    filter(agedf,clorder==i) %>%
-      ggplot(aes(x=age))+
-      geom_segment(aes(xend=age,y=mnsx-sdx,yend=mnsx+sdx),
-                   color='gray60', size = 1)+
-      geom_line(aes(y=mnsx),color='black',size=2)+
-      theme_minimal()+
-      xlab('')+ylab('')+
-      theme(axis.text.y = element_blank(),
-            panel.grid.major.x = element_line(color='gray70',size = 1),
-            panel.grid.major.y = element_blank(),
-            panel.grid.minor = element_blank(),
-            panel.border = element_rect(color=colsx[i],linetype='dashed',size=2,fill=NA))+
-      scale_x_continuous(breaks = seq(0,64,by=10),limits = c(0,64))
-  })
-  midpoints=sapply(unique(discl[hc$order]),function(i){
-    mean(unname(which(discl[hc$order]==i)))
-  })
-  sapply(1:length(agedistplots),function(i){
-    ggsave(paste(i,'.jpeg',sep=''),
-           agedistplots[[i]],device = 'jpeg',width = 3,height = 2)
-  })
-  myimgdat=data.frame(midpoints=midpoints,
-                      xstart=midpoints-3,
-                      xend=midpoints+3,
-                      ystart=rep(-0.65,luniq(discl)),
-                      yend=rep(-0.85,luniq(discl)),
-                      filename=paste(1:luniq(discl),'.jpeg',sep=''))
-  mynewimgdat=myimgdat[1,]
-  for(i in 2:nrow(myimgdat)){
-    if((myimgdat$xstart[i]<mynewimgdat$xend[i-1]) & (myimgdat$ystart[i]==mynewimgdat$ystart[i-1])){
-      newadd=myimgdat[i,]
-      newadd$ystart=newadd$ystart-0.2
-      newadd$yend=newadd$yend-0.2
-      mynewimgdat=rbind(mynewimgdat,newadd)
-    } else{
-      mynewimgdat=rbind(mynewimgdat,myimgdat[i,])
-    }
-  }
-  myimgdat=mynewimgdat
-  p=fviz_dend(hc, k = luniq(discl), # Cut in four groups
-              cex = 1.1, # label size
-              k_colors = colsx,
-              color_labels_by_k = T,
-              rect = TRUE, # Add rectangle around groups
-              rect_border = colsx,
-              rect_fill = F)+
-    ylim(-1,0.4)+
-    theme(axis.text = element_blank(),
-    axis.ticks = element_blank())+
-    ylab('')+
-    ggtitle('')
-  for(i in 1:nrow(myimgdat)){
-    p = p +
-      annotation_raster(readJPEG(as.character(myimgdat$filename[i])),
-                        xmin = myimgdat$xstart[i],
-                        xmax = myimgdat$xend[i],
-                        ymin = myimgdat$ystart[i],
-                        ymax = myimgdat$yend[i],interpolate = T)
-  }
-  ggsave(paste(hcut,'.pdf',sep=''),p,width = 30,height = 12, useDingbats = F)
-  ggsave(paste(hcut,'.png',sep=''),p,width = 30,height = 12)
-}
-setwd(owd)
-
 topdat <- readRDS('./data/processed/ageonset/permRes_50000_all.rds') %>%
   filter(Disease == 'top')
 
@@ -333,23 +232,60 @@ allsummarised2 <- sumx %>%
 ggsave('./results/ageonset/allsummarised2.pdf', allsummarised2, units = 'cm', width = 18, height = 8, useDingbats = F)
 ggsave('./results/ageonset/allsummarised2.png', allsummarised2, units = 'cm', width = 18, height = 8)
 
+# pam2 = function(x,k){
+#   mydis = diss(x,'CORT')
+#   px = cluster::pam(mydis,k,diss=T)
+#   list(cluster = px$clustering)
+# }
+# gapstat = clusGap(medRate, FUNcluster = pam2, K.max = 20, B=1000)
+# saveRDS(gapstat,'./data/processed/ageonset/gapstat.rds')
+# k=sapply(c("firstSEmax", "Tibs2001SEmax", "globalSEmax",
+#            "firstmax", "globalmax"),function(met){
+#              maxSE(gapstat$Tab[,"gap"],gapstat$Tab[,"SE.sim"],method = met)
+#            })
+# k
+# ggplot(as.data.frame(gapstat$Tab),aes(x=1:20))+
+#   annotate(geom='segment',
+#            x= k['Tibs2001SEmax'],
+#            xend = k['Tibs2001SEmax'],
+#            y = 0.85, yend = 0.81,
+#            color = 'darkred',size=1,arrow=arrow(length = unit(5,'pt'))) +
+#   geom_segment(aes(y=gap-SE.sim,yend=gap+SE.sim,xend=1:20)) +
+#   geom_point(aes(y=gap))+
+#   geom_line(aes(y=gap))+
+#   xlab('k')+ylab('Gap') 
+# ggsave('./results/ageonset/gapstat.pdf',units ='cm',width = 8,height = 6,useDingbats=F)
+# ggsave('./results/ageonset/gapstat.png',units ='cm',width = 8,height = 6)
+# mydis = diss(medRate,'CORT')
+# pc = cluster::pam(mydis,k=k['Tibs2001SEmax'],diss=T)
+# saveRDS(pc,'./data/processed/ageonset/clusters_pam_Tibs2001SEmax.rds')
+# saveRDS(mydis,'./data/processed/ageonset/distmat_cort.rds')
 
-px = fviz_dend(hc, # Cut in four groups
-            cex = 1.1, # label size
-            label_cols = unname(discatcolors[unname(disTreecl[hc$labels[hc$order]])]),
-            color_labels_by_k = F,
-            rect = F, # Add rectangle around groups
-            rect_fill = F)+
-  ylim(-1,0.4)+
-  theme(axis.text = element_blank(),
-        axis.ticks = element_blank())+
-  ylab('')+
-  ggtitle('')
-ggsave('./results/ageonset/clusterColoredCat.pdf',px,width = 50,height = 20, useDingbats = F, units = 'cm')
-ggsave('./results/ageonset/clusterColoredCat.png',px,width = 50,height = 20, units = 'cm')
+pc = readRDS('./data/processed/ageonset/clusters_pam_Tibs2001SEmax.rds')
+mydis = readRDS('./data/processed/ageonset/distmat_cort.rds')
 
-for ( k in 2:25){
-overlapdat <- data.frame(Disease = names(cutree(hc,k)), AgeOnsetCluster = as.factor(unname(cutree(hc,k)))) %>%
+pam_cl = medRate %>%
+  reshape2::melt() %>%
+  set_names(c('Disease','Age','val')) %>%
+  mutate(cl = pc$clustering[as.character(Disease)]) %>%
+  arrange(Disease) %>%
+  left_join(data.frame(Disease = names(disTreecl), Category = unname(disTreecl))) %>%
+  left_join(reshape2::melt(table(pc$clustering)) %>%set_names(c('cl','disnum'))) %>% 
+  mutate(cluster = paste('Cluster:',cl,', # of Diseases: ',disnum,sep='')) %>%
+  ggplot(aes(x=Age,color = Category)) +
+  geom_hline(yintercept = 0,color='black',size=0.1)+
+  geom_line(aes(y=val,group=Disease),alpha=0.5,size=0.5)+
+  facet_wrap(~cluster, ncol=2) +
+  scale_color_manual(values=discatcolors)+
+  theme(legend.position = 'right',
+        panel.grid.major.x = element_line(color='gray60',size=0.2,linetype = 'dashed'),
+        panel.grid.minor.x = element_line(color='gray70',size=0.1,linetype = 'dashed')) + 
+  ylab('Disease Onset Rate') + labs(caption = 'clustered by PAM with CORT distance') 
+ggsave('./results/ageonset/pam_cort_medRate.pdf',pam_cl, units = 'cm',width = 18,height = 12, useDingbats =F)  
+ggsave('./results/ageonset/pam_cort_medRate.png',pam_cl, units = 'cm',width = 18,height = 12)  
+
+overlapdat <- data.frame(Disease = names(pc$clustering), 
+                         AgeOnsetCluster = as.factor(unname(pc$clustering))) %>%
   left_join(data.frame(Disease = names(disTreecl), Category = unname(disTreecl))) %>%
   group_by(AgeOnsetCluster, Category) %>%
   summarise(numDis = length(unique(Disease))) %>%
@@ -358,18 +294,17 @@ overlapdat <- data.frame(Disease = names(cutree(hc,k)), AgeOnsetCluster = as.fac
 rownames(overlapdat) = overlapdat$AgeOnsetCluster
 overlapdat$AgeOnsetCluster = NULL
 overlapdat = as.matrix(overlapdat)
-overlapdat = overlapdat[as.character(unique(cutree(hc,k)[hc$order])),]
+overlapdat = overlapdat[as.character(unique(pc$clustering)),]
 overlapdat = 100 * overlapdat / rowSums(overlapdat)
 pheatmap::pheatmap(overlapdat,
                    cluster_rows = F,
                    color = colorRampPalette(brewer.pal(8,'Oranges'))(max(overlapdat)),
                    number_color = 'black', cellwidth = 20, cellheight = 20, 
-                   filename = paste('./results/ageonset/age_cat_overlap_k',k,'.pdf',sep=''),
-                   display_numbers = T, number_format = '%.0f', main = paste('k=',k,sep=''))
+                   filename = paste('./results/ageonset/age_cat_overlap.pdf',sep=''),
+                   display_numbers = T, number_format = '%.0f')
 pheatmap::pheatmap(overlapdat,
                    cluster_rows = F,
                    color = colorRampPalette(brewer.pal(8,'Oranges'))(max(overlapdat)),
                    number_color = 'black', cellwidth = 20, cellheight = 20, 
-                   filename = paste('./results/ageonset/age_cat_overlap_k',k,'.png',sep=''),
-                   display_numbers = T, number_format = '%.0f', main = paste('k=',k,sep=''))
-}
+                   filename = paste('./results/ageonset/age_cat_overlap.png',sep=''),
+                   display_numbers = T, number_format = '%.0f')
