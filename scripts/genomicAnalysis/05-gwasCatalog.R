@@ -1,9 +1,6 @@
 source('./scripts/00-setup.R')
 disIDs = gsub('a','',list.files('./results/caseControl/'))
 disCoding <- setNames(disCoding$meaning,disCoding$node_id)
-mhcchr=6
-mhcstart=28477797
-mhcend=33448354
 
 gwascat <-  read_tsv('../melike/projects/shared_data/GWASCatalog/20190607/data/raw/gwas_catalog_v1.0.2-associations_e96_r2019-05-03.tsv') %>%
   filter(`P-VALUE`<=5e-8)
@@ -38,6 +35,7 @@ names(signifgenes)=disIDs
 
 allingwascat <- unique(unlist(strsplit(unlist(strsplit(gwascat$MAPPED_GENE,', ')),' - ')))
 allingwascat <- length(allingwascat)
+
 resx <- lapply(signifgenes, function(disGene){
   t(sapply(gwasassocs,function(gcat){
     resx <- data.frame(x=length(unique(intersect(disGene,gcat))))
