@@ -24,3 +24,8 @@ disTree_level1=neighbors(disTree,'Top','out')$name
 discatcolors <- setNames(c(brewer.pal(8,'Set2'),brewer.pal(4,'Pastel1')),disTree_level1)
 discatcolors['unclassifiable'] <- 'gray80' 
 discatcolors['Top'] <- 'gray40' 
+mhcchr=6
+mhcstart=28477797
+mhcend=33448354
+
+ageonsetcolors = setNames(rev(brewer.pal(4,'Oranges')),1:4)
