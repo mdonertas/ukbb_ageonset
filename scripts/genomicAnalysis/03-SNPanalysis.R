@@ -271,4 +271,24 @@ netp = ggarrange(net1,net2, labels = c('a','b'))
 ggsave('./results/genomicAnalysis/SNPnet.pdf', netp, units = 'cm', width = 18, height = 8, useDingbats = F)
 ggsave('./results/genomicAnalysis/SNPnet.png', netp, units = 'cm', width = 18, height = 8)
 
+###
 
+odds = apply(snpmat,2,function(x){
+  apply(snpmat,2,function(y){
+    obs = sum((x == y) & (x != 0))
+    p = (sum(x!=0)/ totSNPnum) * (sum(y!=0)/ totSNPnum) 
+    bit = binom.test(x = obs, n = totSNPnum, p = p, alternative = 'g')
+    bit$estimate/(p)
+  })
+})
+
+p = apply(snpmat,2,function(x){
+  apply(snpmat,2,function(y){
+    obs = sum((x == y) & (x != 0))
+    p = (sum(x!=0)/ totSNPnum) * (sum(y!=0)/ totSNPnum) 
+    bit = binom.test(x = obs, n = totSNPnum, p = p, alternative = 'greater')
+    bit$p.value
+  })
+})
+saveRDS(odds, './data/processed/genomicAnalysis/diseaseSim_odds_basedonSNPs.rds')
+saveRDS(p, './data/processed/genomicAnalysis/diseaseSim_p_basedonSNPs.rds')
