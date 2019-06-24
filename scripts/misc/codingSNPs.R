@@ -1,26 +1,12 @@
-library(GenomicRanges)
-library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-library(VariantAnnotation)
 library(tidyverse)
-# prepare coding - noncoding lists
-snpinfo <- read_tsv('./data/processed/ukbb/gwas/bolt/a1071.imp.stats')
-snpdat <- snpinfo %>%
-  select(CHR,BP,everything()) %>%
-  rename(chr = CHR, start = BP) %>%
-  mutate(end = start) %>%
-  select(chr,start,end,everything()) %>%
-  makeGRangesFromDataFrame(keep.extra.columns = T)
+xx = read_tsv('./data/processed/codingVariants/varmap_output.tsv')
+which(xx$UNIPROT_ACCESSION!='-')[1:10]
+xx[which(xx$UNIPROT_ACCESSION!='-')[1:10],] %>%
+  View()
+mean(xx$CODON_CHANGE!='-')
+codingvar = xx %>%
+  filter(CODON_CHANGE != '-')
 
-seqlevels(snpdat) = paste("chr", seqlevels(snpdat), sep = "")
-genome(snpdat) = "hg19"
-codingvar <- locateVariants(snpdat, txdb, CodingVariants())
-ovx <- findOverlaps(codingvar,snpdat)
-codingvarx <- snpdat[subjectHits(ovx),]$SNP
-noncodingvarx <- setdiff(snpdat$SNP,codingvarx)
-
-codingvar <- codingvar[queryHits(ovx),]
-codingvar$SNP <- snpdat[subjectHits(ovx),]$SNP
-system('mkdir -p data/processed/SNPinfo')
-saveRDS(codingvarx,'./data/processed/SNPinfo/codingSNPIDs.rds')
-saveRDS(noncodingvarx,'./data/processed/SNPinfo/noncodingSNPIDs.rds')
-saveRDS(codingvar,'./data/processed/SNPinfo/codingSNPinfo.rds')
+data.frame(coding_variants = unique((codingvar %>%filter(SYNONYMOUS==F))$USER_ID)) %>%
+  filter(coding_variants !='.') %>% 
+  write_tsv('./data/processed/codingVariants/codingvars_synremoved.tsv')
