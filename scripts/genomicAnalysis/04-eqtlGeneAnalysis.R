@@ -156,6 +156,7 @@ odds = apply(genemat,2,function(x){
     bit$estimate/(p)
   })
 })
+saveRDS(odds,'./data/processed/genomicAnalysis/diseaseSim_odds_basedoneQTLGenes.rds')
 diag(odds) = NA
 p = apply(genemat,2,function(x){
   apply(genemat,2,function(y){
@@ -165,6 +166,7 @@ p = apply(genemat,2,function(x){
     bit$p.value
   })
 })
+saveRDS(p,'./data/processed/genomicAnalysis/diseaseSim_p_basedoneQTLGenes.rds')
 odds[p>0.01] = 1
 l2odds = log2(odds)
 i = which(rowMeans(l2odds==0, na.rm =T) != 1)
