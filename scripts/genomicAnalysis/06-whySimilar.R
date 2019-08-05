@@ -129,20 +129,22 @@ rawp = mydat %>%
          sameAge = factor(c('different age clusters','same age cluster')[1+sameAge])) %>%
   mutate(corrected_val = lm(snp_odds ~ sameCat + cooccur, data=mydat)$resid) %>%
   ggplot(aes(x = sameAge, y= snp_odds)) +
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_sina(color = 'gray40', size = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 0.5, color = 'gray40') +
   ylab('Genetic Similarity\nlog2(odds ratio)') + xlab('') +
   ggtitle('\nRaw values')
+
 
 correctedp = mydat %>%
   mutate(sameCat = factor(c('different category','same category')[1+sameCat]),
          sameAge = factor(c('different age clusters','same age cluster')[1+sameAge])) %>%
   mutate(corrected_val = lm(snp_odds ~ sameCat + cooccur, data=mydat)$resid) %>%
   ggplot(aes(x = sameAge, y= corrected_val)) +
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_sina(color = 'gray40', size= 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(color = 'gray40', size= 0.5, width = 0.2) +
   ylab('Genetic Similarity\nlog2(odds ratio)') + xlab('') +
-  ggtitle('Corrected values\n(by category and co-occurrence)')
+  ggtitle('Corrected values\n(by category and co-occurrence)') 
+
 
 snpp = ggarrange(rawp,correctedp,labels='auto')
 ggsave('./results/genomicAnalysis/SNPsimilarity_bysameAge.pdf',snpp, units = 'cm', width = 18, height = 7, useDingbats = F)
@@ -167,8 +169,9 @@ mydat = alldat %>%
 rawp = mydat %>%
   filter(disA_ageonset ==1) %>%
   ggplot(aes(x = disB_ageonset, y= snp_odds)) +
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_jitter(aes(color = cooccur), size = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  # geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
+  geom_jitter(size = 0.5, color = 'gray40') +
   ylab('Genetic Similarity\nlog2(odds ratio)') + xlab('') +
   ggtitle('Similarity between age-of-onset cl1\nand other clusters (with raw values)')
 
@@ -176,10 +179,11 @@ correctedp = mydat %>%
   filter(disA_ageonset ==1) %>%
   mutate(corrected_val = lm(snp_odds ~ sameCat + cooccur, data=.)$resid) %>%
   ggplot(aes(x = disB_ageonset, y= corrected_val)) +
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_jitter(aes(color = cooccur), size = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  # geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
+  geom_jitter( size = 0.5, color = 'gray40') +
   ylab('Genetic Similarity\nlog2(odds ratio)') + xlab('') +
-  ggtitle('\nwith corrected values (by category and co-occurrence)')
+  ggtitle('\nwith corrected values (by category and co-occurrence)') 
 
 snpp = ggarrange(rawp,correctedp,labels='auto', nrow = 2, ncol=1, common.legend = T, legend = 'right')
 ggsave('./results/genomicAnalysis/SNPsimilarity_cl1_bysameAge.pdf',snpp, units = 'cm', width = 16, height = 14, useDingbats = F)
