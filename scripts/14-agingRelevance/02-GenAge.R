@@ -142,27 +142,94 @@ rownames(restable) = c('cl1genes','cl1genes_h1cat','cl2genes','cl2genes_h1cat','
 restable[c(1,3,5),]
 restable[c(2,4,6),]
 
-permtables = lapply(list(cl1genes,cl1genes_h1cat,cl2genes,cl2genes_h1cat,cl3genes,cl3genes_h1cat),function(x){
-  xx = t(sapply(1:1000,function(i){
-    calcprop(sample(unique(genedat$geneid),length(x)))
-  }))
-  colnames(xx)= c('human','anymodel','micegenes','wormgenes','flygenes','yeastgenes','drug-target')
-  xx
+cl1vscl2genes = t(sapply(1:1000,function(i){
+  calcprop(sample(unique(cl2genes),length(cl1genes),rep=T))
+}))
+colnames(cl1vscl2genes)= c('human','anymodel','micegenes','wormgenes','flygenes','yeastgenes','drug-target')
+cl1vscl2p = sapply(colnames(restable)[-8],function(nm){
+  mean(cl1vscl2genes[,nm]>=restable['cl1genes',nm])
 })
 
-names(permtables) = c('cl1genes','cl1genes_h1cat','cl2genes','cl2genes_h1cat','cl3genes','cl3genes_h1cat')
-
-prestable = t(sapply(names(permtables),function(nm){
-  xx = permtables[[nm]]
-  sapply(colnames(xx),function(setx){
-    mean(xx[,setx]>=restable[nm,setx])
-  })
+cl1vscl3genes = t(sapply(1:1000,function(i){
+  calcprop(sample(unique(cl3genes),length(cl1genes),rep=T))
 }))
+colnames(cl1vscl3genes)= c('human','anymodel','micegenes','wormgenes','flygenes','yeastgenes','drug-target')
+cl1vscl3p = sapply(colnames(restable)[-8],function(nm){
+  mean(cl1vscl3genes[,nm]>=restable['cl1genes',nm])
+})
+
+cl2vscl3genes = t(sapply(1:1000,function(i){
+  calcprop(sample(unique(cl3genes),length(cl2genes),rep=T))
+}))
+colnames(cl2vscl3genes)= c('human','anymodel','micegenes','wormgenes','flygenes','yeastgenes','drug-target')
+cl2vscl3p = sapply(colnames(restable)[-8],function(nm){
+  mean(cl2vscl3genes[,nm]>=restable['cl2genes',nm])
+})
 
 
-prestable[c(1,3,5),]
-prestable[c(2,4,6),]
+cl1vscl2genes_h1 = t(sapply(1:1000,function(i){
+  calcprop(sample(unique(cl2genes_h1cat),length(cl1genes_h1cat),rep=T))
+}))
+colnames(cl1vscl2genes_h1)= c('human','anymodel','micegenes','wormgenes','flygenes','yeastgenes','drug-target')
+cl1vscl2_h1p = sapply(colnames(restable)[-8],function(nm){
+  mean(cl1vscl2genes_h1[,nm]>=restable['cl1genes_h1cat',nm])
+})
+
+
+cl1vscl3genes_h1 = t(sapply(1:1000,function(i){
+  calcprop(sample(unique(cl3genes_h1cat),length(cl1genes_h1cat),rep=T))
+}))
+colnames(cl1vscl3genes_h1)= c('human','anymodel','micegenes','wormgenes','flygenes','yeastgenes','drug-target')
+cl1vscl3_h1p = sapply(colnames(restable)[-8],function(nm){
+  mean(cl1vscl3genes_h1[,nm]>=restable['cl1genes_h1cat',nm])
+})
+
+
+cl2vscl3genes_h1 = t(sapply(1:1000,function(i){
+  calcprop(sample(unique(cl3genes_h1cat),length(cl2genes_h1cat),rep=T))
+}))
+colnames(cl2vscl3genes_h1)= c('human','anymodel','micegenes','wormgenes','flygenes','yeastgenes','drug-target')
+cl2vscl3_h1p = sapply(colnames(restable)[-8],function(nm){
+  mean(cl2vscl3genes_h1[,nm]>=restable['cl2genes_h1cat',nm])
+})
+
+prestable = rbind(cl1vscl2p,cl1vscl3p,cl2vscl3p,cl1vscl2_h1p,cl1vscl3_h1p,cl2vscl3_h1p)
 # human anymodel micegenes wormgenes flygenes yeastgenes drug-target
-# cl1genes_h1cat 0.392    0.739     0.377     0.838        1          1       0.078
-# cl2genes_h1cat 1.000    1.000     1.000     1.000        1          1       0.529
-# cl3genes_h1cat 0.588    1.000     1.000     1.000        1          1       0.806
+# cl1vscl2p    0.251    0.133     0.002     0.691    0.099      0.203       0.708
+# cl1vscl3p    0.876    0.001     0.110     0.002    0.000      0.841       0.215
+# cl2vscl3p    0.866    0.110     0.870     0.039    0.000      0.891       0.245
+# cl1vscl2_h1p 0.000    0.000     0.000     0.000    1.000      1.000       0.172
+# cl1vscl3_h1p 0.400    0.000     0.000     0.000    1.000      1.000       0.024
+# cl2vscl3_h1p 1.000    1.000     1.000     1.000    1.000      1.000       0.406
+
+matrix(p.adjust(prestable[4:6,c(1,2,7)],method='fdr'),ncol=3,nrow=3,byrow = F,dimnames=list(c('cl1vscl2','cl1vscl3','cl2vscl3'),c('human','model','drugtarget')))
+
+# human model drugtarget
+# cl1vscl2 0.000     0     0.3096
+# cl1vscl3 0.522     0     0.0540
+# cl2vscl3 1.000     1     0.5220
+
+# permtables = lapply(list(cl1genes,cl1genes_h1cat,cl2genes,cl2genes_h1cat,cl3genes,cl3genes_h1cat),function(x){
+#   xx = t(sapply(1:1000,function(i){
+#     calcprop(sample(unique(genedat$geneid),length(x)))
+#   }))
+#   colnames(xx)= c('human','anymodel','micegenes','wormgenes','flygenes','yeastgenes','drug-target')
+#   xx
+# })
+# 
+# names(permtables) = c('cl1genes','cl1genes_h1cat','cl2genes','cl2genes_h1cat','cl3genes','cl3genes_h1cat')
+# 
+# prestable = t(sapply(names(permtables),function(nm){
+#   xx = permtables[[nm]]
+#   sapply(colnames(xx),function(setx){
+#     mean(xx[,setx]>=restable[nm,setx])
+#   })
+# }))
+# 
+# 
+# prestable[c(1,3,5),]
+# prestable[c(2,4,6),]
+# # human anymodel micegenes wormgenes flygenes yeastgenes drug-target
+# # cl1genes_h1cat 0.392    0.739     0.377     0.838        1          1       0.078
+# # cl2genes_h1cat 1.000    1.000     1.000     1.000        1          1       0.529
+# # cl3genes_h1cat 0.588    1.000     1.000     1.000        1          1       0.806
