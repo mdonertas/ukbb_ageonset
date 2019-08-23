@@ -128,7 +128,59 @@ gores_cl3_h1 = go_enrich.test(genelist = genex, selection = function(x)x==3)
 
 allgores = lapply(list(gores_cl1_h1,gores_cl2_h1,gores_cl3_h1),function(x){filter(x,p.adjusted<=0.1)%>%dplyr::select(-genelist)})
 names(allgores) = c('cl1','cl2','cl3')
+allgores = reshape2::melt(allgores, id.vars = colnames(allgores[[1]])) %>%
+  dplyr::rename(cluster = `L1`) 
 
-reshape2::melt(allgores, id.vars = colnames(allgores[[1]])) %>%
-  dplyr::rename(cluster = `L1`) %>% 
-  write_tsv('~/Desktop/clustergo.tsv')
+golist = as.list(GO.db::GOTERM)
+godef = lapply(allgores$GO.ID,function(x)data.frame(term = Term(golist[[x]]),definition = Definition(golist[[x]])))
+names(godef) = allgores$GO.ID
+
+allgores = reshape2::melt(godef, id.vars = c('term','definition')) %>%
+  dplyr::rename(GO.ID = `L1`) %>% 
+  mutate(definition = as.character(definition)) %>%
+  mutate(term = as.character(term)) %>%
+  right_join(allgores)
+
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+library(wordcloud2)
+
+create_freq = function(clx){
+  x = Corpus(VectorSource(setdiff(unname(unlist(allgores %>% filter(cluster == clx) %>% dplyr::select(term,definition))),NA)))
+  toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+  x <- tm_map(x, toSpace, "/")
+  x <- tm_map(x, toSpace, "@")
+  x <- tm_map(x, toSpace, "\\|")
+  x <- tm_map(x, content_transformer(tolower))
+  x <- tm_map(x, removeNumbers)
+  x <- tm_map(x, removeWords, stopwords("english"))
+  x <- tm_map(x, removeWords, c('the','which','with','any','process'))
+  x <- tm_map(x, removePunctuation)
+  x <- tm_map(x, stripWhitespace)
+  dtm <- TermDocumentMatrix(x)
+  m <- as.matrix(dtm)
+  v <- sort(rowSums(m),decreasing=TRUE)
+  return(data.frame(word = names(v),freq=v))
+}
+
+d1 = create_freq('cl1')
+d2 = create_freq('cl2')
+d3 = create_freq('cl3')
+set.seed(1234)
+pdf('~/Desktop/cl1.pdf')
+wordcloud(words = d1$word, freq = d1$freq, min.freq = 2,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2")) 
+dev.off()
+pdf('~/Desktop/cl2.pdf')
+wordcloud(words = d2$word, freq = d2$freq, min.freq = 2,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2")) 
+dev.off()
+pdf('~/Desktop/cl3.pdf')
+wordcloud(words = d3$word, freq = d3$freq, min.freq = 2,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2")) 
+dev.off()
