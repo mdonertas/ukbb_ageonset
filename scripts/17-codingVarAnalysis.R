@@ -118,6 +118,12 @@ rownames(clcath) = clcath$CATH_NAME
 clcath$CATH_NAME = NULL
 clcath = as.matrix(clcath)
 
+# Alpha Beta - 2-Layer Sandwich       9 4 1
+# Alpha Beta - 3-Layer(aba) Sandwich  4 8 5
+# Mainly Alpha - Orthogonal Bundle    9 6 1
+# Mainly Alpha - Up-down Bundle      12 6 4
+# Mainly Beta - Sandwich             12 8 2
+
 clcath = t(apply(clcath[which(rowSums(clcath)>1),],1,function(x)x/sum(x)))
 pheatmap::pheatmap(clcath, color = brewer.pal(8,'Reds'))
 
@@ -135,6 +141,11 @@ rownames(clpfam) = clpfam$PFAM_NAME
 clpfam$PFAM_NAME = NULL
 clpfam = as.matrix(clpfam)
 
+# 7tm_4      22 2 2
+# C1-set      3 2 0
+# RIG-I_C-RD  2 2 1
+# TIR         0 0 5
+
 clpfam = t(apply(clpfam[which(rowSums(clpfam)>1),],1,function(x)x/sum(x)))
 pheatmap::pheatmap(clpfam, color = brewer.pal(8,'Reds'))
 
@@ -147,10 +158,18 @@ xx %>%
   # filter(aoocl == 3) %>% summary()
 
 # figures
-missyn_cl
-dismissense
-clmissense
-clsift
-clpolyphen
-pheatmap::pheatmap(clcath, color = brewer.pal(8,'Reds'))
-pheatmap::pheatmap(clpfam, color = brewer.pal(8,'Reds'))
+ggsave('./results/codingVar/cl_missyn_bydis.pdf',missyn_cl,units = 'cm',width=7,height = 7,useDingbats = F)
+ggsave('./results/codingVar/dis_missyn.pdf',dismissense,units = 'cm',width=16,height = 16,useDingbats = F)
+ggsave('./results/codingVar/cl_missyn.pdf', clmissense,units = 'cm',width=7,height = 7,useDingbats = F)
+ggsave('./results/codingVar/cl_sifts.pdf',  clsift,units = 'cm',width=7,height = 7,useDingbats = F)
+ggsave('./results/codingVar/cl_polyphen.pdf',  clpolyphen,units = 'cm',width=7,height = 7,useDingbats = F)
+pheatmap::pheatmap(clcath, color = brewer.pal(8,'Reds'),cellwidth = 10,cellheight = 10,file = './results/codingVar/cath_by_cl.pdf')
+pheatmap::pheatmap(clpfam, color = brewer.pal(8,'Reds'),cellwidth = 10,cellheight = 10,file = './results/codingVar/pfam_by_cl.pdf')
+
+ggsave('./results/codingVar/cl_missyn_bydis.png',missyn_cl,units = 'cm',width=7,height = 7)
+ggsave('./results/codingVar/dis_missyn.png',dismissense,units = 'cm',width=16,height = 16)
+ggsave('./results/codingVar/cl_missyn.png', clmissense,units = 'cm',width=7,height = 7)
+ggsave('./results/codingVar/cl_sifts.png',  clsift,units = 'cm',width=7,height = 7)
+ggsave('./results/codingVar/cl_polyphen.png',  clpolyphen,units = 'cm',width=7,height = 7)
+pheatmap::pheatmap(clcath, color = brewer.pal(8,'Reds'),cellwidth = 10,cellheight = 10,file = './results/codingVar/cath_by_cl.png')
+pheatmap::pheatmap(clpfam, color = brewer.pal(8,'Reds'),cellwidth = 10,cellheight = 10,file = './results/codingVar/pfam_by_cl.png')
