@@ -117,6 +117,58 @@ nrow(mydat)
 nrow(unique(mydat))
 mydat = unique(mydat)
 
+library(igraph)
+library(ggnetwork)
+library(ggnet)
+library(ggforce)
+
+mynet = mydat %>%
+  mutate(sameCat = factor(c('different category','same category')[1+sameCat]),
+         sameAge = factor(c('different age clusters','same age cluster')[1+sameAge])) %>%
+  mutate(corrected_val = lm(snp_odds ~ sameCat + cooccur, data=mydat)$resid) %>% 
+  select(disA,disB,snp_odds) %>%
+  na.omit() %>%
+  unique() %>% graph_from_data_frame()
+
+V(mynet)$ageonset_cl = ageonsetclusters$clustering[V(mynet)$name]
+V(mynet)$discat = as.character(disTreecl[V(mynet)$name])
+E(mynet)$edgewidth = summary(E(mynet)$snp_odds/30)
+net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')
+net1 = net0 +
+  geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])
+net2 = net0 +
+  geom_point(size = 2, color = discatcolors[V(mynet)$discat])
+
+ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.pdf', net1, units = 'cm', width = 18, height = 8, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.png', net1, units = 'cm', width = 18, height = 8)
+
+ggsave('./results/genomicAnalysis/SNPnet_discat.pdf', net2, units = 'cm', width = 18, height = 8, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPnet_discat.png', net2, units = 'cm', width = 18, height = 8)
+
+mynet = mydat %>%
+  mutate(sameCat = factor(c('different category','same category')[1+sameCat]),
+         sameAge = factor(c('different age clusters','same age cluster')[1+sameAge])) %>%
+  mutate(corrected_val = lm(snp_odds ~ sameCat + cooccur, data=mydat)$resid) %>% 
+  select(disA,disB,corrected_val) %>%
+  na.omit() %>%
+  unique() %>% graph_from_data_frame()
+
+V(mynet)$ageonset_cl = ageonsetclusters$clustering[V(mynet)$name]
+V(mynet)$discat = as.character(disTreecl[V(mynet)$name])
+E(mynet)$edgewidth = summary((6+E(mynet)$corrected_val)/30)
+net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')
+net1 = net0 +
+  geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])
+net2 = net0 +
+  geom_point(size = 2, color = discatcolors[V(mynet)$discat])
+
+ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.pdf', net1, units = 'cm', width = 18, height = 8, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.png', net1, units = 'cm', width = 18, height = 8)
+
+ggsave('./results/genomicAnalysis/SNPnet_discat.pdf_corr', net2, units = 'cm', width = 18, height = 8, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPnet_discat.png_corr', net2, units = 'cm', width = 18, height = 8)
+
+
 lmmod = lm(snp_odds ~ sameCat + cooccur + sameAge, data=mydat) 
 aovobj = aov(lmmod)
 summary(aovobj)
@@ -149,6 +201,10 @@ correctedp = mydat %>%
 snpp = ggarrange(rawp,correctedp,labels='auto')
 ggsave('./results/genomicAnalysis/SNPsimilarity_bysameAge.pdf',snpp, units = 'cm', width = 18, height = 7, useDingbats = F)
 ggsave('./results/genomicAnalysis/SNPsimilarity_bysameAge.png',snpp, units = 'cm', width = 18, height = 7)
+
+netandbox = ggarrange(net1,correctedp,labels='auto')
+ggsave('./results/genomicAnalysis/SNPsimilarity_age_netbox.pdf',netandbox, units = 'cm', width = 18, height = 7, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPsimilarity_age_netbox.png',netandbox, units = 'cm', width = 18, height = 7)
 
 mydat = alldat %>%
   mutate(snp_odds = log2(snp_odds),
@@ -193,8 +249,8 @@ ggsave('./results/genomicAnalysis/SNPsimilarity_cl1_bysameAge.png',snpp, units =
 rawp = mydat %>%
   filter(disA_ageonset ==2) %>%
   ggplot(aes(x = disB_ageonset, y= snp_odds)) +
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_jitter(aes(color = cooccur), size = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter( size = 0.5) +
   ylab('Genetic Similarity\nlog2(odds ratio)') + xlab('') +
   ggtitle('Similarity between age-of-onset cl2\nand other clusters (with raw values)')
 
@@ -202,8 +258,8 @@ correctedp = mydat %>%
   filter(disA_ageonset ==2) %>%
   mutate(corrected_val = lm(snp_odds ~ sameCat + cooccur, data=.)$resid) %>%
   ggplot(aes(x = disB_ageonset, y= corrected_val)) +
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_jitter(aes(color = cooccur), size = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter( size = 0.5) +
   ylab('Genetic Similarity\nlog2(odds ratio)') + xlab('') +
   ggtitle('\nwith corrected values (by category and co-occurrence)')
 
@@ -214,8 +270,8 @@ ggsave('./results/genomicAnalysis/SNPsimilarity_cl2_bysameAge.png',snpp, units =
 rawp = mydat %>%
   filter(disA_ageonset ==3) %>%
   ggplot(aes(x = disB_ageonset, y= snp_odds)) +
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_jitter(aes(color = cooccur), size = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(size = 0.5) +
   ylab('Genetic Similarity\nlog2(odds ratio)') + xlab('') +
   ggtitle('Similarity between age-of-onset cl3\nand other clusters (with raw values)')
 
@@ -223,14 +279,19 @@ correctedp = mydat %>%
   filter(disA_ageonset ==3) %>%
   mutate(corrected_val = lm(snp_odds ~ sameCat + cooccur, data=.)$resid) %>%
   ggplot(aes(x = disB_ageonset, y= corrected_val)) +
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_jitter(aes(color = cooccur), size = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter( size = 0.5) +
   ylab('Genetic Similarity\nlog2(odds ratio)') + xlab('') +
   ggtitle('\nwith corrected values (by category and co-occurrence)')
 
 snpp = ggarrange(rawp,correctedp,labels='auto', nrow = 2, ncol=1, common.legend = T, legend = 'right')
 ggsave('./results/genomicAnalysis/SNPsimilarity_cl3_bysameAge.pdf',snpp, units = 'cm', width = 16, height = 14, useDingbats = F)
 ggsave('./results/genomicAnalysis/SNPsimilarity_cl3_bysameAge.png',snpp, units = 'cm', width = 16, height = 14)
+
+
+
+
+
 
 ####
 
