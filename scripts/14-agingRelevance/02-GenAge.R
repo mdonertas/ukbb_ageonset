@@ -130,21 +130,20 @@ cl3genes_h1cat = (genedat %>%
 # 
 # saveRDS(aginggenes,'./data/processed/agingrelevance/aginggenes.rds')
 aginggenes = readRDS('./data/processed/agingrelevance/aginggenes.rds')
+cellage = read_csv('./data/raw/cellage.csv')
+aginggenes = c(aginggenes,list(cellage$`Gene Name` ))
 allgenes = unique(signifGenes$geneid)
 genegr = list(cl1genes,cl2genes,cl3genes,
               cl1genes_h1cat,cl2genes_h1cat,cl3genes_h1cat)
-x=genegr[[1]]
-y=aginggenes[[1]]
-
 permres = lapply(genegr,function(x){
-  xx = t(sapply(aginggenes[c(1,2,7)],function(y){
+  xx = t(sapply(aginggenes[c(1,2,7,8)],function(y){
     xx = sapply(1:10000,function(i){100*mean(sample(allgenes,length(x))%in%y)})
-    c(perm=mean(xx),val=100*mean(x%in%y),p=mean(xx>=(100*mean(x%in%y))))
+    c(perm=mean(xx),val=100*mean(x%in%y),p=mean(xx>=(100*mean(x%in%y))),num = sum(x%in%y),genesize = length(x), agsize = length(intersect(y,allgenes)))
   }))
-  rownames(xx) = c('human','model','drug')
+  rownames(xx) = c('human','model','drug','senescence')
   xx
 })
-names(permres) = paste(rep(1:3,2),rep(c('','_strict'),3),sep='')
+names(permres) = paste(rep(1:3,2),rep(c('','_strict'),each=3),sep='')
 
 xx = reshape2::melt(permres) %>%
   spread(Var2,value) %>%
@@ -152,14 +151,31 @@ xx = reshape2::melt(permres) %>%
   mutate(type=ifelse(is.na(type),'all',type)) %>%
   rename(Aging = Var1) %>%
   mutate(prop = log2(val/perm))
-oddsplot = ggplot(xx) +
+oddsplot = xx %>% 
+  filter(type =='strict') %>%
+  ggplot() +
   geom_bar(aes(x = cluster, y= prop, fill=cluster), stat='identity', position = 'dodge') +
-  facet_grid(type~Aging) +
+  facet_grid(~Aging) +
   scale_fill_manual(values = ageonsetcolors) +
-  ylim(-1.1,1.1) +
-  geom_text(data =filter(xx,p<=0.1),aes(x=cluster,y=0.05,label='p<=0.1'), angle=90,color='white',hjust=0) +
+  geom_label(aes(label = num, x= cluster, y= prop))+
+  ylim(-2.6,2.6) +
+  geom_text(data =filter(filter(xx,type=='strict'),p<=0.1),aes(x=cluster,y=-0.01,label=scales::pvalue(p,add_p = T,accuracy = 0.001)), angle=90,color='black',hjust=1) +
   xlab('Age of onset cluster') + ylab('Log2 Odds Ratio') +
   guides(fill = F)
 
-ggsave('./results/agingRelevance/genage.pdf',oddsplot,units ='cm',width = 10,height = 12,useDingbats=F)
-ggsave('./results/agingRelevance/genage.png',oddsplot,units ='cm',width = 10,height = 12)
+odds_all = xx %>% 
+  filter(type =='all') %>%
+  ggplot() +
+  geom_bar(aes(x = cluster, y= prop, fill=cluster), stat='identity', position = 'dodge') +
+  facet_grid(~Aging) +
+  scale_fill_manual(values = ageonsetcolors) +
+  geom_label(aes(label = num, x= cluster, y= prop))+
+  ylim(-1.2,1.2) +
+  geom_text(data =filter(filter(xx,type=='all'),p<=0.1),aes(x=cluster,y=-0.01,label=scales::pvalue(p,add_p = T,accuracy = 0.001)), angle=90,color='black',hjust=1) +
+  xlab('Age of onset cluster') + ylab('Log2 Odds Ratio') +
+  guides(fill = F)
+
+oddsx = ggarrange(odds_all+ggtitle('Genes specific to one cluster'),oddsplot+ggtitle('Genes specific to one cluster and linked to multiple categories'),labels = 'auto',nrow=2)
+
+ggsave('./results/agingRelevance/genage.pdf',oddsx,units ='cm',width = 15,height = 20,useDingbats=F)
+ggsave('./results/agingRelevance/genage.png',oddsx,units ='cm',width = 15,height = 20)
