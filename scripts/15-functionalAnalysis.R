@@ -84,103 +84,437 @@ cl3genes_h1cat = (genedat %>%
 
 source('../shared/functions/functions.R')
 
-go_enrich.test <- function(genelist, selection, description = "",ontologyx='BP',
-                           ID = "Ensembl", nodesize = 1,corrmethod="fdr") {
-  library(topGO)
-  library("org.Hs.eg.db")
-  genel = new("topGOdata", ontology = ontologyx, allGenes = genelist,
-              geneSel = selection, description = description, annot = annFUN.org,
-              mapping = "org.Hs.eg.db", ID = ID, nodeSize = nodesize)
-  resultFisher = runTest(genel, algorithm = "classic", statistic = "fisher")
-  sigterms = resultFisher@geneData["SigTerms"]
-  genetable = GenTable(genel, classicFisher = resultFisher,
-                       topNodes = sigterms)
-  ps = c()
-  for (i in genetable$classicFisher) {
-    if (i == "< 1e-30")
-      ps = c(ps, 1e-30) else {
-        ps = c(ps, i)
-      }
-  }
-  genetable_padjusted = cbind(genetable, p.adjust((ps),method=corrmethod))
-  colnames(genetable_padjusted)[7]='p.adjusted'
-  genetable_padjusted$genelist=lapply(genetable_padjusted$GO.ID,function(go)intersect(genesInTerm(genel,go)[[1]],names(which(sapply(genelist,selection)))))
-  return(genetable_padjusted)
-}
 gnls=unique(signifGenes$geneid)
 genex = setNames(rep(0,length(gnls)),gnls)
 genex[names(genex) %in% cl1genes] = 1
 genex[names(genex) %in% cl2genes] = 2
 genex[names(genex) %in% cl3genes] = 3
-gores_cl1 = go_enrich.test(genelist = genex, selection = function(x)x==1)
-gores_cl2 = go_enrich.test(genelist = genex, selection = function(x)x==2)
-gores_cl3 = go_enrich.test(genelist = genex, selection = function(x)x==3)
+bpres_cl1 = go_enrich.test(genelist = genex, selection = function(x)x==1) %>% 
+  mutate(cluster = '1', ontology = 'BP')
+bpres_cl2 = go_enrich.test(genelist = genex, selection = function(x)x==2) %>% 
+  mutate(cluster = '2', ontology = 'BP')
+bpres_cl3 = go_enrich.test(genelist = genex, selection = function(x)x==3) %>% 
+  mutate(cluster = '3', ontology = 'BP')
+mfres_cl1 = go_enrich.test(genelist = genex, selection = function(x)x==1, ontologyx = 'MF') %>% 
+  mutate(cluster = '1', ontology = 'MF')
+mfres_cl2 = go_enrich.test(genelist = genex, selection = function(x)x==2, ontologyx = 'MF') %>% 
+  mutate(cluster = '2', ontology = 'MF')
+mfres_cl3 = go_enrich.test(genelist = genex, selection = function(x)x==3, ontologyx = 'MF') %>% 
+  mutate(cluster = '3', ontology = 'MF')
+ccres_cl1 = go_enrich.test(genelist = genex, selection = function(x)x==1, ontologyx = 'CC') %>% 
+  mutate(cluster = '1', ontology = 'CC')
+ccres_cl2 = go_enrich.test(genelist = genex, selection = function(x)x==2, ontologyx = 'CC') %>% 
+  mutate(cluster = '2', ontology = 'CC')
+ccres_cl3 = go_enrich.test(genelist = genex, selection = function(x)x==3, ontologyx = 'CC') %>% 
+  mutate(cluster = '3', ontology = 'CC')
+
+gores = rbind(bpres_cl1,bpres_cl2,bpres_cl3,
+              mfres_cl1,mfres_cl2,mfres_cl3,
+              ccres_cl1,ccres_cl2,ccres_cl3) %>%
+  filter(Annotated<=500 & Annotated>=5)
+gores = gores %>% 
+  mutate(p.adjusted = p.adjust(classicFisher, method='fdr'))
+gores %>%
+  dplyr::select(-genelist) %>%
+  arrange(p.adjusted) %>%
+  write_tsv('./results/functionalAnalysis/clusterXgenes.tsv')
+p.val = 0.05
+
+enrichment_table=dplyr::filter(gores, cluster=='1')
+enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
+enrichment_table$Gr = c(rep('Detection of stimulus',6),
+                        rep('Other',1),
+                        rep('GPCR',1),
+                        rep('Lipoprotein-related functions',3),
+                        rep('Other',1),
+                        rep('Lipoprotein-related functions',1),
+                        rep('Morphogenesis Differentiation',1),
+                        rep('Detection of stimulus',1),
+                        rep('Other',1),
+                        rep('Morphogenesis Differentiation',1),
+                        rep('Other',1),
+                        rep('Morphogenesis Differentiation',1),
+                        rep('Detection of stimulus',1),
+                        rep('GPCR',1),
+                        rep('Morphogenesis Differentiation',1),
+                        rep('Blood circulation',1),
+                        rep('Other',2),
+                        rep('Blood circulation',1),
+                        rep('GPCR',1),
+                        rep('Detection of stimulus',1),
+                        rep('Other',1))
+mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
+mygraph=graph_from_data_frame(mymat)
+gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
+verttype=gr
+verttype[grep('ENSG',names(V(mygraph)))]='Gene'
+verttype = setNames(verttype,names(V(mygraph)))
+verttype=as.factor(verttype)
+vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
+vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
+vertsize=ceiling(vertsize)
+labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
+labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
+verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
+V(mygraph)$verttype = verttype
+# vertsize[verttype=='Gene'] = 0.5
+V(mygraph)$vertsize = vertsize
+# gr = gr[complete.cases(gr)]
+library(ggforce)
+labx[verttype!='Other']=''
+# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
+#   xx = verttype[!verttype%in%c('Gene','Other')]
+#   sample(names(xx)[xx==x],1)
+# })
+# labx[xx]=names(xx)
+labx[labx=='']=NA
+cl1_go=ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
+  geom_point(aes(fill = verttype), 
+             size = vertsize,
+             shape = c(23,21)[1+(verttype=='Gene')],
+             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
+  geom_text(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
+  scale_fill_brewer(type = 'qual',palette = 6)+
+  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
+  theme_void() +
+  theme(legend.position = 'bottom')
+# system('mkdir ./results/functionalAnalysis')
+ggsave('./results/functionalAnalysis/cl1_go.pdf',cl1_go, units = 'cm', width = 16.7,height = 10, useDingbats = F)
+ggsave('./results/functionalAnalysis/cl1_go.png',cl1_go, units = 'cm', width = 16.7,height = 10)
+
+enrichment_table=dplyr::filter(gores, cluster=='2')
+enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
+# enrichment_table$Gr = c(rep('Detection of stimulus',6),
+#                         rep('Other',1),
+#                         rep('GPCR',1),
+#                         rep('Lipoprotein-related functions',3),
+#                         rep('Other',1),
+#                         rep('Lipoprotein-related functions',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('Other',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Other',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('GPCR',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Blood circulation',1),
+#                         rep('Other',2),
+#                         rep('Blood circulation',1),
+#                         rep('GPCR',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('Other',1))
+mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
+mygraph=graph_from_data_frame(mymat)
+# gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
+verttype=rep('GO.ID',length(V(mygraph)))
+verttype[grep('ENSG',names(V(mygraph)))]='Gene'
+verttype = setNames(verttype,names(V(mygraph)))
+verttype=as.factor(verttype)
+vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
+vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
+vertsize=ceiling(vertsize)
+labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
+labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
+# verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
+V(mygraph)$verttype = verttype
+# vertsize[verttype=='Gene'] = 0.5
+V(mygraph)$vertsize = vertsize
+# gr = gr[complete.cases(gr)]
+library(ggforce)
+# labx[verttype!='Other']=''
+# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
+#   xx = verttype[!verttype%in%c('Gene','Other')]
+#   sample(names(xx)[xx==x],1)
+# })
+# labx[xx]=names(xx)
+# labx[labx=='']=NA
+cl2_go = ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
+  geom_point(aes(fill = verttype), 
+             size = vertsize,
+             shape = c(23,21)[1+(verttype=='Gene')],
+             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
+  geom_text_repel(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
+  scale_fill_brewer(type = 'qual',palette = 6)+
+  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
+  theme_void() +
+  theme(legend.position = 'bottom')
+# system('mkdir ./results/functionalAnalysis')
+ggsave('./results/functionalAnalysis/cl2_go.pdf',cl2_go, units = 'cm', width = 8,height = 8, useDingbats = F)
+ggsave('./results/functionalAnalysis/cl2_go.png',cl2_go, units = 'cm', width = 8,height = 8)
+
+enrichment_table=dplyr::filter(gores, cluster=='3')
+enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
+# enrichment_table$Gr = c(rep('Detection of stimulus',6),
+#                         rep('Other',1),
+#                         rep('GPCR',1),
+#                         rep('Lipoprotein-related functions',3),
+#                         rep('Other',1),
+#                         rep('Lipoprotein-related functions',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('Other',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Other',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('GPCR',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Blood circulation',1),
+#                         rep('Other',2),
+#                         rep('Blood circulation',1),
+#                         rep('GPCR',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('Other',1))
+mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
+mygraph=graph_from_data_frame(mymat)
+# gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
+verttype=rep('GO.ID',length(V(mygraph)))
+verttype[grep('ENSG',names(V(mygraph)))]='Gene'
+verttype = setNames(verttype,names(V(mygraph)))
+verttype=as.factor(verttype)
+vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
+vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
+vertsize=ceiling(vertsize)
+labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
+labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
+# verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
+V(mygraph)$verttype = verttype
+# vertsize[verttype=='Gene'] = 0.5
+V(mygraph)$vertsize = vertsize
+# gr = gr[complete.cases(gr)]
+library(ggforce)
+# labx[verttype!='Other']=''
+# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
+#   xx = verttype[!verttype%in%c('Gene','Other')]
+#   sample(names(xx)[xx==x],1)
+# })
+# labx[xx]=names(xx)
+# labx[labx=='']=NA
+cl3_go = ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
+  geom_point(aes(fill = verttype), 
+             size = vertsize,
+             shape = c(23,21)[1+(verttype=='Gene')],
+             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
+  # geom_text(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
+  scale_fill_brewer(type = 'qual',palette = 6)+
+  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
+  theme_void() +
+  theme(legend.position = 'bottom')
+# system('mkdir ./results/functionalAnalysis')
+ggsave('./results/functionalAnalysis/cl3_go.pdf',cl3_go, units = 'cm', width = 8,height = 8, useDingbats = F)
+ggsave('./results/functionalAnalysis/cl3_go.png',cl3_go, units = 'cm', width = 8,height = 8)
+
 
 gnls=unique(signifGenes$geneid)
 genex = setNames(rep(0,length(gnls)),gnls)
 genex[names(genex) %in% cl1genes_h1cat] = 1
 genex[names(genex) %in% cl2genes_h1cat] = 2
 genex[names(genex) %in% cl3genes_h1cat] = 3
-gores_cl1_h1 = go_enrich.test(genelist = genex, selection = function(x)x==1)
-gores_cl2_h1 = go_enrich.test(genelist = genex, selection = function(x)x==2)
-gores_cl3_h1 = go_enrich.test(genelist = genex, selection = function(x)x==3)
+bpres_cl1_h1 = go_enrich.test(genelist = genex, selection = function(x)x==1) %>% 
+  mutate(cluster = '1', ontology = 'BP')
+bpres_cl2_h1 = go_enrich.test(genelist = genex, selection = function(x)x==2) %>% 
+  mutate(cluster = '2', ontology = 'BP')
+bpres_cl3_h1 = go_enrich.test(genelist = genex, selection = function(x)x==3) %>% 
+  mutate(cluster = '3', ontology = 'BP')
+mfres_cl1_h1 = go_enrich.test(genelist = genex, selection = function(x)x==1, ontologyx = 'MF') %>% 
+  mutate(cluster = '1', ontology = 'MF')
+mfres_cl2_h1 = go_enrich.test(genelist = genex, selection = function(x)x==2, ontologyx = 'MF') %>% 
+  mutate(cluster = '2', ontology = 'MF')
+mfres_cl3_h1 = go_enrich.test(genelist = genex, selection = function(x)x==3, ontologyx = 'MF') %>% 
+  mutate(cluster = '3', ontology = 'MF')
+ccres_cl1_h1 = go_enrich.test(genelist = genex, selection = function(x)x==1, ontologyx = 'CC') %>% 
+  mutate(cluster = '1', ontology = 'CC')
+ccres_cl2_h1 = go_enrich.test(genelist = genex, selection = function(x)x==2, ontologyx = 'CC') %>% 
+  mutate(cluster = '2', ontology = 'CC')
+ccres_cl3_h1 = go_enrich.test(genelist = genex, selection = function(x)x==3, ontologyx = 'CC') %>% 
+  mutate(cluster = '3', ontology = 'CC')
 
+gores = rbind(bpres_cl1_h1,bpres_cl2_h1,bpres_cl3_h1,
+              mfres_cl1_h1,mfres_cl2_h1,mfres_cl3_h1,
+              ccres_cl1_h1,ccres_cl2_h1,ccres_cl3_h1) %>%
+  filter(Annotated<=500 & Annotated>=5)
+gores = gores %>% 
+  mutate(p.adjusted = p.adjust(classicFisher, method='fdr'))
+gores %>%
+  dplyr::select(-genelist) %>%
+  arrange(p.adjusted) %>%
+  write_tsv('./results/functionalAnalysis/strict_clusterXgenes.tsv')
 
-allgores = lapply(list(gores_cl1_h1,gores_cl2_h1,gores_cl3_h1),function(x){filter(x,p.adjusted<=0.1)%>%dplyr::select(-genelist)})
-names(allgores) = c('cl1','cl2','cl3')
-allgores = reshape2::melt(allgores, id.vars = colnames(allgores[[1]])) %>%
-  dplyr::rename(cluster = `L1`) 
+p.val = 0.05
 
-golist = as.list(GO.db::GOTERM)
-godef = lapply(allgores$GO.ID,function(x)data.frame(term = Term(golist[[x]]),definition = Definition(golist[[x]])))
-names(godef) = allgores$GO.ID
+enrichment_table=dplyr::filter(gores, cluster=='1')
+enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
+enrichment_table$Gr = c(rep('Protein Binding',1),
+                        rep('Cell Cycle',3),
+                        rep('Other',2),
+                        rep('Cell Cycle',5),
+                        rep('Protein Binding',1),
+                        rep('Cell Cycle',1),
+                        rep('Protein Binding',1),
+                        rep('Cell Cycle',1),
+                        rep('Other',2),
+                        rep('Cell Cycle',2))
+mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
+mygraph=graph_from_data_frame(mymat)
+gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
+verttype=gr
+verttype[grep('ENSG',names(V(mygraph)))]='Gene'
+verttype = setNames(verttype,names(V(mygraph)))
+verttype=as.factor(verttype)
+vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
+vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
+vertsize=ceiling(vertsize)
+labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
+labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
+verttype = factor(verttype,levels = levels(verttype)[c(2,1,4,3)])
+V(mygraph)$verttype = verttype
+# vertsize[verttype=='Gene'] = 0.5
+V(mygraph)$vertsize = vertsize
+# gr = gr[complete.cases(gr)]
+library(ggforce)
+labx[verttype!='Other']=''
+# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
+#   xx = verttype[!verttype%in%c('Gene','Other')]
+#   sample(names(xx)[xx==x],1)
+# })
+# labx[xx]=names(xx)
+labx[labx=='']=NA
+cl1_go=ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
+  geom_point(aes(fill = verttype), 
+             size = vertsize*2,
+             shape = c(23,21)[1+(verttype=='Gene')],
+             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
+  geom_text_repel(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
+  scale_fill_brewer(type = 'qual',palette = 6)+
+  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
+  theme_void() +
+  theme(legend.position = 'bottom')
+# system('mkdir ./results/functionalAnalysis')
+ggsave('./results/functionalAnalysis/cl1_h1_go.pdf',cl1_go, units = 'cm', width = 8,height = 8, useDingbats = F)
+ggsave('./results/functionalAnalysis/cl1_h1_go.png',cl1_go, units = 'cm', width = 8,height = 8)
 
-allgores = reshape2::melt(godef, id.vars = c('term','definition')) %>%
-  dplyr::rename(GO.ID = `L1`) %>% 
-  mutate(definition = as.character(definition)) %>%
-  mutate(term = as.character(term)) %>%
-  right_join(allgores)
+enrichment_table=dplyr::filter(gores, cluster=='2')
+enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
+# enrichment_table$Gr = c(rep('Detection of stimulus',6),
+#                         rep('Other',1),
+#                         rep('GPCR',1),
+#                         rep('Lipoprotein-related functions',3),
+#                         rep('Other',1),
+#                         rep('Lipoprotein-related functions',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('Other',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Other',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('GPCR',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Blood circulation',1),
+#                         rep('Other',2),
+#                         rep('Blood circulation',1),
+#                         rep('GPCR',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('Other',1))
+mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
+mygraph=graph_from_data_frame(mymat)
+# gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
+verttype=rep('GO.ID',length(V(mygraph)))
+verttype[grep('ENSG',names(V(mygraph)))]='Gene'
+verttype = setNames(verttype,names(V(mygraph)))
+verttype=as.factor(verttype)
+vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
+vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
+vertsize=ceiling(vertsize)
+labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
+labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
+# verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
+V(mygraph)$verttype = verttype
+# vertsize[verttype=='Gene'] = 0.5
+V(mygraph)$vertsize = vertsize
+# gr = gr[complete.cases(gr)]
+library(ggforce)
+# labx[verttype!='Other']=''
+# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
+#   xx = verttype[!verttype%in%c('Gene','Other')]
+#   sample(names(xx)[xx==x],1)
+# })
+# labx[xx]=names(xx)
+# labx[labx=='']=NA
+cl2_go = ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
+  geom_point(aes(fill = verttype), 
+             size = vertsize,
+             shape = c(23,21)[1+(verttype=='Gene')],
+             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
+  geom_text_repel(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
+  scale_fill_brewer(type = 'qual',palette = 6)+
+  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
+  theme_void() +
+  theme(legend.position = 'bottom')
+# system('mkdir ./results/functionalAnalysis')
+ggsave('./results/functionalAnalysis/cl2_h1_go.pdf',cl2_go, units = 'cm', width = 8,height = 8, useDingbats = F)
+ggsave('./results/functionalAnalysis/cl2_h1_go.png',cl2_go, units = 'cm', width = 8,height = 8)
 
-library("tm")
-library("SnowballC")
-library("wordcloud")
-library("RColorBrewer")
-library(wordcloud2)
-
-create_freq = function(clx){
-  x = Corpus(VectorSource(setdiff(unname(unlist(allgores %>% filter(cluster == clx) %>% dplyr::select(term,definition))),NA)))
-  toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
-  x <- tm_map(x, toSpace, "/")
-  x <- tm_map(x, toSpace, "@")
-  x <- tm_map(x, toSpace, "\\|")
-  x <- tm_map(x, content_transformer(tolower))
-  x <- tm_map(x, removeNumbers)
-  x <- tm_map(x, removeWords, stopwords("english"))
-  x <- tm_map(x, removeWords, c('the','which','with','any','process'))
-  x <- tm_map(x, removePunctuation)
-  x <- tm_map(x, stripWhitespace)
-  dtm <- TermDocumentMatrix(x)
-  m <- as.matrix(dtm)
-  v <- sort(rowSums(m),decreasing=TRUE)
-  return(data.frame(word = names(v),freq=v))
-}
-
-d1 = create_freq('cl1')
-d2 = create_freq('cl2')
-d3 = create_freq('cl3')
-set.seed(1234)
-pdf('~/Desktop/cl1.pdf')
-wordcloud(words = d1$word, freq = d1$freq, min.freq = 2,
-          max.words=50, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2")) 
-dev.off()
-pdf('~/Desktop/cl2.pdf')
-wordcloud(words = d2$word, freq = d2$freq, min.freq = 2,
-          max.words=50, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2")) 
-dev.off()
-pdf('~/Desktop/cl3.pdf')
-wordcloud(words = d3$word, freq = d3$freq, min.freq = 2,
-          max.words=50, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2")) 
-dev.off()
+enrichment_table=dplyr::filter(gores, cluster=='3')
+enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
+# enrichment_table$Gr = c(rep('Detection of stimulus',6),
+#                         rep('Other',1),
+#                         rep('GPCR',1),
+#                         rep('Lipoprotein-related functions',3),
+#                         rep('Other',1),
+#                         rep('Lipoprotein-related functions',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('Other',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Other',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('GPCR',1),
+#                         rep('Morphogenesis Differentiation',1),
+#                         rep('Blood circulation',1),
+#                         rep('Other',2),
+#                         rep('Blood circulation',1),
+#                         rep('GPCR',1),
+#                         rep('Detection of stimulus',1),
+#                         rep('Other',1))
+mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
+mygraph=graph_from_data_frame(mymat)
+# gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
+verttype=rep('GO.ID',length(V(mygraph)))
+verttype[grep('ENSG',names(V(mygraph)))]='Gene'
+verttype = setNames(verttype,names(V(mygraph)))
+verttype=as.factor(verttype)
+vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
+vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
+vertsize=ceiling(vertsize)
+labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
+labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
+# verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
+V(mygraph)$verttype = verttype
+# vertsize[verttype=='Gene'] = 0.5
+V(mygraph)$vertsize = vertsize
+# gr = gr[complete.cases(gr)]
+library(ggforce)
+# labx[verttype!='Other']=''
+# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
+#   xx = verttype[!verttype%in%c('Gene','Other')]
+#   sample(names(xx)[xx==x],1)
+# })
+# labx[xx]=names(xx)
+# labx[labx=='']=NA
+cl3_go = ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
+  geom_point(aes(fill = verttype), 
+             size = vertsize,
+             shape = c(23,21)[1+(verttype=='Gene')],
+             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
+  # geom_text(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
+  scale_fill_brewer(type = 'qual',palette = 6)+
+  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
+  theme_void() +
+  theme(legend.position = 'bottom')
+# system('mkdir ./results/functionalAnalysis')
+ggsave('./results/functionalAnalysis/cl3_h1_go.pdf',cl3_go, units = 'cm', width = 8,height = 8, useDingbats = F)
+ggsave('./results/functionalAnalysis/cl3_h1_go.png',cl3_go, units = 'cm', width = 8,height = 8)
