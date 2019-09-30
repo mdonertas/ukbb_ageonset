@@ -92,7 +92,6 @@ drug_target_list = lapply(unique(interactions$ChEMBLID),function(drug){
 names(drug_target_list)=unique(interactions$ChEMBLID)
 genesx = intersect(genedat$geneid,interactions$gene_name)
 
-drugx = drug_target_list[[1]]
 cl1drugs = as.data.frame(t(sapply(drug_target_list,function(drugx){
   a = length(unique(intersect(drugx,cl1genes_h1cat)))
   b = length(unique(intersect(drugx,genesx))) - a
@@ -106,8 +105,38 @@ cl1drugs = as.data.frame(t(sapply(drug_target_list,function(drugx){
   mutate(padj = p.adjust(p,method ='fdr')) %>%
   mutate(ChEMBLID = names(drug_target_list))
 
-unique(filter(cl1drugs,p<=0.05)$ChEMBLID)
-
+drugage = read_csv('../melike/projects/shared_data/GenAge/20190813/data/raw/drugage.csv')
+DA_drugs_incSyn <- unique(drugage$compound_name)
+name2CID <- function(nm) {
+  library(RCurl)
+  library(jsonlite)
+  nm <- URLencode(nm, reserved = T)
+  name2cid <- getURL(paste("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/",
+                           nm, "/cids/JSON", sep = ""))
+  name2cid <- fromJSON(name2cid)
+  return(name2cid$IdentifierList$CID)
+}
+convertIDs <- function(drugList) {
+  cids <- sapply(drugList, name2CID)
+  cids <- cids[!sapply(cids, is.null)]
+  cids <- reshape2::melt(cids) %>% rename(CID = value,
+                                          drugName = L1)
+  noCID <- setdiff(drugList, cids$drugName)
+  return(list(cids, noCID))
+}
+DA_drugs_incSyn_CIDs <- convertIDs(DA_drugs_incSyn)
+DA_drugs_incSyn_CIDlist <- DA_drugs_incSyn_CIDs[[1]]
+cid2chembl <- function(intab, out_fx) {
+  pubchem2chembl <- read_tsv("../melike/projects/shared_data/UniChem/20190813/data/raw/src1src22.txt") %>%
+    setNames(., c("ChEMBLID", "CID")) %>% mutate(CID = as.character(CID))
+  fintable <- intab %>% mutate(CID = as.character(CID)) %>%
+    left_join(pubchem2chembl) %>% unique()
+  return(fintable)
+}
+DA_drugs_incSyn_CHEMBLlist <- cid2chembl(DA_drugs_incSyn_CIDlist)
+unique(filter(cl1drugs,p<=0.1)$ChEMBLID)
+DA_drugs_incSyn_CHEMBLlist %>%
+  filter(ChEMBLID %in% unique(filter(cl1drugs,p<=0.1)$ChEMBLID))
 chembl2name <- function(nm){
   library(RCurl)
   library(jsonlite)
@@ -118,7 +147,7 @@ chembl2name <- function(nm){
   else{dat <- fromJSON(dat)
   return(unique(toupper(dat$pref_name)))}
 }
-chemid = unique(filter(cl1drugs,p<=0.05)$ChEMBLID)
+chemid = unique(filter(cl1drugs,p<=0.1)$ChEMBLID)
 chemname = sapply(chemid,chembl2name)
 chemname = reshape2::melt(chemname) %>% set_names(c('Name','ChEMBLID')) 
 chemtargets  = interactions %>%
@@ -127,7 +156,7 @@ chemtargets  = interactions %>%
   summarise(genes = paste(sort(unique(gene_name)),collapse = ', '),
             cl1genes = paste(sort(unique(intersect(gene_name,cl1genes_h1cat))),collapse = ', '))
 
-filter(cl1drugs,p<=0.05) %>%
+filter(cl1drugs,p<=0.1) %>%
   left_join(chemname) %>%
   left_join(chemtargets) %>%
   arrange(-odds,-a) %>%
@@ -141,9 +170,21 @@ V(myg)$type = 'drug'
 V(myg)$type[V(myg)$name %in% interactions$gene_name] = 'gene'
 V(myg)$cl = '-'
 V(myg)$cl[V(myg)$name %in% cl1genes_h1cat ] = 'cl1'
-library(ggnet)
-ggnet2(myg, shape = 'type', color ='cl', size= 3, palette = c("-" = "gray60", "cl1" = "#D94701", "drugAge" = "steelblue"), label = T, label.size = 2) 
-ggsave('./results/temp/drugs.pdf',width = 12,height = 9,units = 'cm',useDingbats=F)
+V(myg)$color=V(myg)$type
+V(myg)$color[V(myg)$name %in% cl1genes_h1cat] = 'cl1'
+labx= V(myg)$name
+labx[!labx%in%genedat$geneid]=tolower(labx[!labx%in%genedat$geneid])
+library(GGally)
+drugnet = ggnet2(myg,size=0,edge.color='gray70')+
+  geom_point(shape = c(18,19)[factor(V(myg)$type)], 
+             size = c(3,2)[factor(V(myg)$type)],
+             color = c('firebrick2','dodgerblue','azure3')[factor(V(myg)$color)]) +
+  geom_text_repel(label=labx,box.padding = 0.01,size=6/pntnorm,
+                  color = c('gray5','midnightblue','gray70')[factor(V(myg)$color)])
+
+ggsave('./results/drugnet.pdf', drugnet,width = 16.7,height = 12,units = 'cm',useDingbats=F)
+ggsave('./results/drugnet.png', drugnet,width = 16.7,height = 12,units = 'cm')
+
 filter(cl1drugs,odds>0,a>0) %>%
   left_join(chemname) %>%
   left_join(chemtargets) %>%
