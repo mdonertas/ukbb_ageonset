@@ -280,9 +280,9 @@ antagonist_ukbb_sampling = data.frame(cluster = factor(rep(1:2,each=1000),levels
   scale_color_manual(values = ageonsetcolors) +
   guides(color=F)
 
-allukbb=ggarrange(ukkb_ld_onedis+ggtitle('SNPs associated with\none disease'), ukkb_ld_onecl+ggtitle('SNPs associated with\none cluster'), ukkb_ld_anta+ggtitle('SNPs Antagonistic Between\nCluster1 and Cluster3'), ncol=3,labels = 'auto',nrow=1) 
+allukbb=ggarrange(ukkb_ld_onedis+ggtitle('SNPs associated with\none disease'), ukkb_ld_onecl+ggtitle('SNPs associated with\none cluster'), ukkb_ld_anta+ggtitle('SNPs Antagonistic Between\nCluster1 and Cluster2'), ncol=3,labels = 'auto',nrow=1) 
 
-allukbb_sampling=ggarrange(onedisease_ukbb_sampling+ggtitle('SNPs associated with\none disease'), onecluster_ukbb_sampling+ggtitle('SNPs associated with\none cluster'), antagonist_ukbb_sampling+ggtitle('SNPs Antagonistic Between\nCluster1 and Cluster3'), ncol=3,labels = 'auto',nrow=1) 
+allukbb_sampling=ggarrange(onedisease_ukbb_sampling+ggtitle('SNPs associated with\none disease'), onecluster_ukbb_sampling+ggtitle('SNPs associated with\none cluster'), antagonist_ukbb_sampling+ggtitle('SNPs Antagonistic Between\nCluster1 and Cluster2'), ncol=3,labels = 'auto',nrow=1) 
 
 ggsave('./results/evoAnalysis/RAF_ukbb_ldblock.pdf',allukbb,units = 'cm',width = 20 ,height = 7,useDingbats =F)
 ggsave('./results/evoAnalysis/RAF_ukbb_ldblock.png',allukbb,units = 'cm',width = 20,height = 7)
