@@ -18,210 +18,260 @@ varmap = readRDS('./data/processed/codingVariants/varmap_codingChange.rds')
 signifs = lapply(signifSNPs,function(x){
   mutate(x, RA = ifelse(BETA<0,Alt,Ref))
 })
-
 names(signifs)=unname(disCoding[names(signifs)])
-
 signifs = reshape2::melt(signifs,id.vars = colnames(signifs[[1]])) %>%
   rename(disease = L1) %>%
   mutate(CHR = as.numeric(CHR)) %>%
-  mutate(aoocl = as.factor(clusters$clustering[as.character(disease)]))
-
-xx = signifs %>%
+  mutate(cluster = as.factor(clusters$clustering[as.character(disease)]))
+signifs = signifs %>%
   rename(CHROMOSOME = CHR, COORDS = BP, USER_BASE = Ref, USER_VARIANT = Alt) %>%
   inner_join(varmap) %>%
   separate(AA_CHANGE,into=c('aa1','aa2'),remove =F,sep='/')
+signifs = signifs %>%
+  mutate(SNP2 = paste(CHROMOSOME,COORDS,USER_BASE,USER_VARIANT,sep='_')) 
 
-xx %>%
-  filter(!SYNONYMOUS & UNIPROT_ACCESSION!='-') %>%
-  select(SNP,aoocl,UNIPROT_ACCESSION) %>%
-  group_by(aoocl) %>%
-  summarise(prot_num = length(unique(UNIPROT_ACCESSION)),
-            snp_num = length(unique(SNP)))
+xx = signifs %>%
+  filter((!SYNONYMOUS) & UNIPROT_ACCESSION!='-') %>%
+  select(SNP2,UNIPROT_ACCESSION) %>%
+  unique() 
+# How many SNP - protein association: (only missense)
+nrow(xx)
+# 449
+# How many unique SNPs:
+length(unique(xx$SNP2))
+# 449
+# How many unique proteins:
+length(unique(xx$UNIPROT_ACCESSION))
+# 313
 
-# aoocl prot_num snp_num
-# <fct>    <int>   <int>
-# 1 1          210     291
-# 2 2          103     141
-# 3 3           55      87
+xx = signifs %>%
+  filter((!SYNONYMOUS) & UNIPROT_ACCESSION!='-') %>%
+  select(SNP2,UNIPROT_ACCESSION,cluster) %>%
+  unique() 
+xx1 = (xx %>% filter(cluster == 1))
+xx2 = (xx %>% filter(cluster == 2))
+xx3 = (xx %>% filter(cluster == 3))
+# How many SNP - protein association: (only missense)
+sapply(list(xx1,xx2,xx3),function(xx)nrow(xx))
+# [1] 291 141  87
+# How many unique SNPs:
+sapply(list(xx1,xx2,xx3),function(xx)length(unique(xx$SNP2)))
+# [1] 291 141  87
+# How many unique proteins:
+sapply(list(xx1,xx2,xx3),function(xx)length(unique(xx$UNIPROT_ACCESSION)))
+# [1] 210 103  55
 
-xx %>%
-  filter(!SYNONYMOUS & UNIPROT_ACCESSION!='-') %>%
-  select(SNP,aoocl,UNIPROT_ACCESSION) %>%
-  # group_by(aoocl) %>%
-  summarise(prot_num = length(unique(UNIPROT_ACCESSION)),
-            snp_num = length(unique(SNP)))
-# prot_num snp_num
-# 1      313     449
-xx %>%
-  filter(!SYNONYMOUS & CLOSEST_PDB_CODE!='-') %>%
-  select(SNP,aoocl,CLOSEST_PDB_CODE) %>%
-  group_by(aoocl) %>%
-  summarise(pdb_num = length(unique(CLOSEST_PDB_CODE)),
-            snp_num = length(unique(SNP)))
+missenseprops = signifs %>% 
+  select(SNP2,cluster,SYNONYMOUS) %>% 
+  unique() %>% 
+  group_by(cluster, SYNONYMOUS) %>%
+  summarise(cnt = length(unique(SNP2))) %>%
+  ungroup() %>%
+  mutate(conseq = ifelse(SYNONYMOUS,'synonymous','missense')) %>%
+  select(-SYNONYMOUS) %>%
+  spread(conseq,cnt) %>%
+  mutate(sum = missense+synonymous) %>%
+  gather(key='conseq',value='num',-cluster,-sum) %>%
+  mutate(prop = num/sum) %>%
+  mutate(cluster=paste('Cluster',cluster,sep=' ')) %>%
+  ggplot(aes(x = conseq, y= prop, fill = conseq)) +
+  facet_wrap(~cluster)+
+  geom_bar(stat='identity') +
+  scale_fill_brewer(type='qual', palette= 4) +
+  geom_label(aes(label= num),fill='white',vjust=1) +
+  xlab('') + ylab('Proportions') +
+  guides(fill = F) +
+  theme_pubr(x.text.angle = 90, legend = 'right',base_size = 10)
 
-# aoocl pdb_num snp_num
-# <fct>   <int>   <int>
-# 1 1         115     131
-# 2 2          51      58
-# 3 3          32      42
+ggsave('./results/codingVar/cl_missenseprops.pdf', missenseprops, units = 'cm', width = 8,height = 8, useDingbats=F)
+ggsave('./results/codingVar/cl_missenseprops.png', missenseprops, units = 'cm', width = 8,height = 8)
 
-xx %>%
-  filter(!SYNONYMOUS & CLOSEST_PDB_CODE!='-') %>%
-  select(SNP,aoocl,CLOSEST_PDB_CODE) %>%
-  # group_by(aoocl) %>%
-  summarise(pdb_num = length(unique(CLOSEST_PDB_CODE)),
-            snp_num = length(unique(SNP)))
-# pdb_num snp_num
-# 1     170     199
+checkx = signifs %>% 
+  select(SNP2,cluster,SYNONYMOUS) %>% 
+  unique() %>% 
+  group_by(cluster, SYNONYMOUS) %>% summarise(snps = list(unique(SNP2)))
+sapply(checkx$snps,function(x){
+  sapply(checkx$snps,function(y){
+    mean(x%in%y)
+  })
+})
+#      [,1]       [,2]      [,3]       [,4]      [,5]       [,6]
+# [1,] 1.00000000 0.00000000 0.3829787 0.00000000 0.1704545 0.00000000
+# [2,] 0.00000000 1.00000000 0.0000000 0.31914894 0.0000000 0.08139535
+# [3,] 0.17821782 0.00000000 1.0000000 0.00000000 0.1818182 0.00000000
+# [4,] 0.00000000 0.14950166 0.0000000 1.00000000 0.0000000 0.11627907
+# [5,] 0.04950495 0.00000000 0.1134752 0.00000000 1.0000000 0.00000000
+# [6,] 0.00000000 0.02325581 0.0000000 0.07092199 0.0000000 1.00000000
 
-disdat = xx %>% 
-  select(CHROMOSOME,COORDS,USER_BASE,USER_VARIANT,RA,disease,aoocl, AA_CHANGE,aa1,aa2,SYNONYMOUS) %>% 
-  group_by(disease, SYNONYMOUS) %>%
-  summarise(cnt = n()) %>%
-  spread(SYNONYMOUS,cnt,fill=0) %>%
-  set_names(c('disease','missense','syn')) %>%
-  mutate(sum = sum(missense, syn)) %>%
-  mutate(misperc = missense/syn) %>%
-  mutate(aoocl = as.factor(clusters$clustering[as.character(disease)]))
-
-missyn_cl = disdat %>%
-  filter(sum>=5) %>%
-  ggplot(aes(x = aoocl, y = misperc, fill = aoocl)) +
-  geom_hline(yintercept = 1,  color = 'gray60', linetype = 'dashed') +
-  geom_boxplot()+
-  geom_jitter() +
-  scale_fill_manual(values = ageonsetcolors) +
-  scale_y_continuous(trans = 'log2') +
-  xlab('Age of Onset Clusters') + ylab('Missense / Synonymous Variant') +
-  guides(fill =F) 
-  
-
-dismissense = disdat %>%
-  filter(sum>=5) %>%
-  ggplot(aes(x = reorder(disease,-misperc), y = misperc, fill = aoocl)) +
-  geom_hline(yintercept = 1,  color = 'gray60', linetype = 'dashed') +
-  geom_bar(stat = 'identity') +
-  scale_fill_manual(values = ageonsetcolors) +
-  coord_flip() +
-  scale_y_continuous(trans = 'log2') +
-  xlab('') + ylab('Missense / Synonymous Variant') +
-  guides(fill = guide_legend('Age of Onset Cluster'))
-
-cldat = xx %>% 
-  select(CHROMOSOME,COORDS,USER_BASE,USER_VARIANT,RA,aoocl, AA_CHANGE,aa1,aa2,SYNONYMOUS) %>% 
-  group_by(aoocl, SYNONYMOUS) %>%
-  summarise(cnt = n()) %>%
-  spread(SYNONYMOUS,cnt,fill=0) %>%
-  set_names(c('aoocl','missense','syn')) %>%
-  mutate(sum = sum(missense, syn)) %>%
-  mutate(misperc = missense/syn) 
-
-clmissense = cldat %>%
-  ggplot(aes(x = aoocl, y = misperc, fill = aoocl)) +
-  geom_bar(stat = 'identity') +
-  scale_fill_manual(values = ageonsetcolors) +
-  xlab('Age of Onset Cluster') + ylab('Missense / Synonymous Variant') + guides(fill =F) +
-  scale_y_continuous(trans ='log2', labels = c(1,1.15),breaks = c(1,1.15)) +
-  geom_hline(yintercept = 1,  color = 'gray60', linetype = 'dashed') 
-
-clsift = xx %>% 
-  select(CHROMOSOME,COORDS,USER_BASE,USER_VARIANT,RA,aoocl, AA_CHANGE,aa1,aa2,SYNONYMOUS, SIFTS_SCORE) %>% 
+siftpred = signifs %>%
+  filter(!SYNONYMOUS) %>%
+  select(SNP2, cluster, SIFTS_SCORE) %>%
+  filter(SIFTS_SCORE!='-') %>%
   unique() %>%
-  select(aoocl,SIFTS_SCORE) %>%
   mutate(SIFTS_SCORE = as.numeric(as.character(SIFTS_SCORE))) %>%
-  ggplot(aes(x = aoocl, y= SIFTS_SCORE,fill=aoocl)) +
-  geom_boxplot() +
-  geom_sina(size =0.5) +
-  scale_fill_manual(values = ageonsetcolors) + guides(fill=F) +
-  xlab('Age of Onset Cluster') + ylab('SIFTS Score')
+  mutate(tolerated = c('deleterious','tolerated')[1+(SIFTS_SCORE>0.05)]) %>%
+  group_by(cluster,tolerated) %>%
+  summarise(n = n()) %>%
+  ungroup() %>%
+  spread(tolerated,n) %>%
+  mutate(sum = deleterious + tolerated) %>%
+  gather(key = 'type', value = 'num',-cluster,-sum) %>%
+  mutate(prop = num/sum) %>%
+  mutate(cluster=paste('Cluster',cluster,sep=' ')) %>%
+  ggplot(aes(x = type, y= prop, fill = type)) +
+  facet_wrap(~cluster)+
+  geom_bar(stat='identity') +
+  scale_fill_brewer(type='qual', palette= 4) +
+  geom_label(aes(label= num),fill='white',vjust=1) +
+  xlab('') + ylab('Proportions') +
+  guides(fill =F) +
+  theme_pubr(x.text.angle = 90, legend = 'right',base_size = 10)
 
-clpolyphen = xx %>% 
-  select(CHROMOSOME,COORDS,USER_BASE,USER_VARIANT,RA,aoocl, AA_CHANGE,aa1,aa2,SYNONYMOUS, POLYPHEN_SCORE) %>% 
-  unique() %>%
-  select(aoocl,POLYPHEN_SCORE) %>%
-  mutate(POLYPHEN_SCORE = as.numeric(as.character(POLYPHEN_SCORE))) %>%
-  ggplot(aes(x = aoocl, y= POLYPHEN_SCORE,fill=aoocl)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_sina(size =0.5) +
-  scale_fill_manual(values = ageonsetcolors) + guides(fill=F) +
-  xlab('Age of Onset Cluster') + ylab('Polyphen Score') +
-  scale_y_sqrt()
+ggsave('./results/codingVar/cl_siftpred.pdf', siftpred, units = 'cm', width = 8,height = 8, useDingbats=F)
+ggsave('./results/codingVar/cl_siftpred.png', siftpred, units = 'cm', width = 8,height = 8)
 
-clcath = xx %>%
+conseq = ggarrange(missenseprops,siftpred + ggtitle('SIFT Predictions'),ncol=2,labels='auto',align = 'hv')
+
+ggsave('./results/codingVar/cl_conseq.pdf', conseq, units = 'cm', width = 16.7,height = 9, useDingbats=F)
+ggsave('./results/codingVar/cl_conseq.png', conseq, units = 'cm', width = 16.7,height = 9)
+
+fisher.test(matrix(c(96,197,23,117),byrow = T, nrow=2))
+# Fisher's Exact Test for Count Data
+# 
+# data:  matrix(c(96, 197, 23, 117), byrow = T, nrow = 2)
+# p-value = 0.0003387
+# alternative hypothesis: true odds ratio is not equal to 1
+# 95 percent confidence interval:
+#  1.460374 4.324188
+# sample estimates:
+# odds ratio 
+#     2.4741
+fisher.test(matrix(c(96,197,19,64),byrow = T, nrow=2))
+# Fisher's Exact Test for Count Data
+# 
+# data:  matrix(c(96, 197, 19, 64), byrow = T, nrow = 2)
+# p-value = 0.105
+# alternative hypothesis: true odds ratio is not equal to 1
+# 95 percent confidence interval:
+#  0.9081521 3.0686504
+# sample estimates:
+# odds ratio 
+#   1.639416 
+fisher.test(matrix(c(23,117,19,64),byrow = T, nrow=2))
+# Fisher's Exact Test for Count Data
+# 
+# data:  matrix(c(23, 117, 19, 64), byrow = T, nrow = 2)
+# p-value = 0.2878
+# alternative hypothesis: true odds ratio is not equal to 1
+# 95 percent confidence interval:
+#  0.3183666 1.3934549
+# sample estimates:
+# odds ratio 
+#  0.6634622 
+
+signif_summary = signifs %>%
+  filter(UNIPROT_ACCESSION!='-') %>%
+  select(UNIPROT_ACCESSION, disease, cluster) %>%
+  mutate(category = disTreecl[as.character(disease)]) %>%
+  group_by(UNIPROT_ACCESSION) %>%
+  summarise(n_cluster = length(unique(cluster)),
+            n_disease = length(unique(disease)),
+            n_category = length(unique(category)),
+            clusters = paste(sort(unique(cluster)),collapse = '&'),
+            diseases = paste(sort(unique(disease)),collapse = '&'),
+            categories = paste(sort(unique(category)),collapse = '&'))
+
+signif_summary %>%
+  filter(clusters == '1' & n_category > 1)
+# # A tibble: 4 x 7
+# UNIPROT_ACCESSION n_cluster n_disease n_category clusters diseases     categories  
+# <chr>                 <int>     <int>      <int> <chr>    <chr>        <chr>       
+# 1 Q01970                    1         2          2 1        cardiovascu… cardiovascu…
+# 2 Q09428                    1         2          2 1        diabetes&hy… cardiovascu…
+# 3 Q6YHU6                    1         3          2 1        diabetes&en… cardiovascu…
+# 4 Q9BZW4                    1         2          2 1        diabetes&hi… cardiovascu…
+
+cl1uniprot = (signif_summary %>%
+                filter(clusters == '1' & n_category > 1))$UNIPROT_ACCESSION
+
+signifs %>%
+  filter(UNIPROT_ACCESSION %in% cl1uniprot & CLOSEST_PDB_CODE!='-') %>%
   filter(!SYNONYMOUS) %>%
-  select(aoocl, SNP, CATH_NAME) %>%
+  select(UNIPROT_ACCESSION, CLOSEST_PDB_CODE, GENE, USER_BASE, USER_VARIANT, RA) %>%
+  unique()
+
+xx = signifs %>%
+  filter(!SYNONYMOUS & CATH_NAME!='-') %>%
+  select(SNP2, cluster,CATH_NAME) %>%
   unique() %>%
-  group_by(aoocl,CATH_NAME) %>%
-  summarise(cnt = length(unique(SNP))) %>%
-  na.omit() %>%
-  filter(CATH_NAME!='-') %>%
-  spread(aoocl,cnt,fill=0)%>%
-  as.data.frame
-rownames(clcath) = clcath$CATH_NAME
-clcath$CATH_NAME = NULL
-clcath = as.matrix(clcath)
+  group_by(cluster,CATH_NAME) %>%
+  summarise(n = n()) %>%
+  ungroup() %>%
+  spread(CATH_NAME,n,fill=0) 
+xx$sum = rowSums(xx[,-1])
+cathpl=xx %>%
+  gather(key = 'cath', value='num',-cluster,-sum) %>%
+  mutate(prop = num/sum) %>%
+  ggplot(aes(x = reorder(cath,prop), y= prop, fill=cluster)) +
+  geom_bar(stat='identity') +
+  scale_fill_manual(values=ageonsetcolors) +
+  xlab('') + ylab('Proportions') +
+  guides(fill =F) +
+  coord_flip() +
+  ggtitle('CATH Domains')
+rownames(xx) = xx$cluster
+xx$cluster=NULL
+xx = as.matrix(xx)
+xx = rbind(xx,colSums(xx))
+rownames(xx)[4]='sum'
+cath_enrich = t(apply(xx,2,function(x){
+  a = x[1]
+  b = xx[1,'sum']-a
+  c = x[4]-a
+  d = xx['sum','sum'] - a - b - c
+  mat = matrix(c(a,b,c,d),byrow = T, nrow = 2)
+  fi=fisher.test(mat)
+  c(a,b,c,d,fi$est,fi$p.val)
+}))
+ggsave('./results/codingVar/cl_cath.pdf',cathpl,units='cm',width = 16.7,height = 8,useDingbats=F)
+ggsave('./results/codingVar/cl_cath.png',cathpl,units='cm',width = 16.7,height = 8)
 
-# Alpha Beta - 2-Layer Sandwich       9 4 1
-# Alpha Beta - 3-Layer(aba) Sandwich  4 8 5
-# Mainly Alpha - Orthogonal Bundle    9 6 1
-# Mainly Alpha - Up-down Bundle      12 6 4
-# Mainly Beta - Sandwich             12 8 2
-
-clcath = t(apply(clcath[which(rowSums(clcath)>1),],1,function(x)x/sum(x)))
-pheatmap::pheatmap(clcath, color = brewer.pal(8,'Reds'))
-
-clpfam = xx %>%
-  filter(!SYNONYMOUS) %>%
-  select(aoocl, SNP, PFAM_NAME) %>%
+xx = signifs %>%
+  filter(!SYNONYMOUS & PFAM_DOMAIN!='-') %>%
+  select(SNP2, cluster,PFAM_DOMAIN) %>%
   unique() %>%
-  group_by(aoocl,PFAM_NAME) %>%
-  summarise(cnt = length(unique(SNP))) %>%
-  na.omit() %>%
-  filter(PFAM_NAME!='-') %>%
-  spread(aoocl,cnt,fill=0)%>%
-  as.data.frame
-rownames(clpfam) = clpfam$PFAM_NAME
-clpfam$PFAM_NAME = NULL
-clpfam = as.matrix(clpfam)
-
-# 7tm_4      22 2 2
-# C1-set      3 2 0
-# RIG-I_C-RD  2 2 1
-# TIR         0 0 5
-
-clpfam = t(apply(clpfam[which(rowSums(clpfam)>1),],1,function(x)x/sum(x)))
-pheatmap::pheatmap(clpfam, color = brewer.pal(8,'Reds'))
-
-xx %>%
-  select(SNP,CLOSEST_PDB_CODE,RES_NUM, aoocl) %>%
-  unique() %>% filter(RES_NUM!='-') %>%
-  group_by(aoocl,CLOSEST_PDB_CODE) %>%     
-  summarise(cnt = n(  )) %>% 
-  # filter(CLOSEST_PDB_CODE %in% c('2n4i','2ziy','2nbi')) %>%
-  spread(aoocl,cnt,fill=0) %>%
-  mutate(sum = `1`+`2`+`3`,
-         anyh1 = (`1`>1 | `2`>1 | `3`>1),
-         m1h1 = (`1`>1) + (`2`>1) + (`3`>1)) %>%
-  # filter(sum>1) %>%
-  # filter(anyh1) %>%
-  filter(m1h1>1)
-  # filter(aoocl == 3) %>% summary()
-# 84 vs 53 vs 5
-
-# figures
-ggsave('./results/codingVar/cl_missyn_bydis.pdf',missyn_cl,units = 'cm',width=7,height = 7,useDingbats = F)
-ggsave('./results/codingVar/dis_missyn.pdf',dismissense,units = 'cm',width=16,height = 16,useDingbats = F)
-ggsave('./results/codingVar/cl_missyn.pdf', clmissense,units = 'cm',width=7,height = 7,useDingbats = F)
-ggsave('./results/codingVar/cl_sifts.pdf',  clsift,units = 'cm',width=7,height = 7,useDingbats = F)
-ggsave('./results/codingVar/cl_polyphen.pdf',  clpolyphen,units = 'cm',width=7,height = 7,useDingbats = F)
-pheatmap::pheatmap(clcath, color = brewer.pal(8,'Reds'),cellwidth = 10,cellheight = 10,file = './results/codingVar/cath_by_cl.pdf')
-pheatmap::pheatmap(clpfam, color = brewer.pal(8,'Reds'),cellwidth = 10,cellheight = 10,file = './results/codingVar/pfam_by_cl.pdf')
-
-ggsave('./results/codingVar/cl_missyn_bydis.png',missyn_cl,units = 'cm',width=7,height = 7)
-ggsave('./results/codingVar/dis_missyn.png',dismissense,units = 'cm',width=16,height = 16)
-ggsave('./results/codingVar/cl_missyn.png', clmissense,units = 'cm',width=7,height = 7)
-ggsave('./results/codingVar/cl_sifts.png',  clsift,units = 'cm',width=7,height = 7)
-ggsave('./results/codingVar/cl_polyphen.png',  clpolyphen,units = 'cm',width=7,height = 7)
-pheatmap::pheatmap(clcath, color = brewer.pal(8,'Reds'),cellwidth = 10,cellheight = 10,file = './results/codingVar/cath_by_cl.png')
-pheatmap::pheatmap(clpfam, color = brewer.pal(8,'Reds'),cellwidth = 10,cellheight = 10,file = './results/codingVar/pfam_by_cl.png')
+  group_by(cluster,PFAM_DOMAIN) %>%
+  summarise(n = n()) %>%
+  ungroup() %>%
+  spread(PFAM_DOMAIN,n,fill=0) 
+xx$sum = rowSums(xx[,-1])
+pfampl=xx %>%
+  gather(key = 'pfam', value='num',-cluster,-sum) %>%
+  mutate(prop = num/sum) %>%
+  ggplot(aes(x = reorder(pfam,prop), y= prop, fill=cluster)) +
+  geom_bar(stat='identity') +
+  scale_fill_manual(values=ageonsetcolors) +
+  xlab('') + ylab('Proportions') +
+  guides(fill =F) +
+  coord_flip()+
+  # theme_pubr(base_size = 10, x.text.angle = 90) +
+  ggtitle('PFAM Domains') +
+  theme(axis.text.y=element_blank())
+rownames(xx) = xx$cluster
+xx$cluster=NULL
+xx = as.matrix(xx)
+xx = rbind(xx,colSums(xx))
+rownames(xx)[4]='sum'
+pfam_enrich = t(apply(xx,2,function(x){
+  a = x[1]
+  b = xx[1,'sum']-a
+  c = x[4]-a
+  d = xx['sum','sum'] - a - b - c
+  mat = matrix(c(a,b,c,d),byrow = T, nrow = 2)
+  fi=fisher.test(mat)
+  c(a,b,c,d,fi$est,fi$p.val)
+}))
+any(p.adjust(pfam_enrich[,6],method='fdr')<0.1)
+ggsave('./results/codingVar/cl_pfam.pdf',pfampl,units='cm',width = 8,height = 8,useDingbats=F)
+ggsave('./results/codingVar/cl_pfam.png',pfampl,units='cm',width = 8,height = 8)
 
