@@ -57,6 +57,6 @@ for(mafx in seq(0.5,0.1,by=-0.1)){
     ggtitle(paste('MAF cutoff = ',mafx,sep=''))
   print(antaplot[[k]])
 }
-ggarrange(antaplot[[1]],antaplot[[2]],antaplot[[3]],antaplot[[4]],ncol=2,nrow=2,labels='auto')
+ggarrange(antaplot[[1]],antaplot[[2]],antaplot[[3]],antaplot[[4]],antaplot[[5]],ncol=3,nrow=2,labels='auto')
 ggsave('./results/evoAnalysis/cl12_antagonist_maffiletrs.pdf', width = 16,height = 12, units = 'cm',useDingbats=F)
 ggsave('./results/evoAnalysis/cl12_antagonist_maffiletrs.png', width = 16,height = 12, units = 'cm')
