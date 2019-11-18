@@ -109,10 +109,19 @@ ggsave('./results/functionalAnalysis/genelength.pdf', units = 'cm', width = 8, h
 ggsave('./results/functionalAnalysis/genelength.png', units = 'cm', width = 8, height = 8)
 
 genlen %>%
-  ggplot(aes(x = as.factor(clgenes_h1cat), y = genlen)) +
-  geom_boxplot() +
+  # filter(clgenes_h1cat !=0) %>%
+  ggplot(aes(x = as.factor(clgenes_h1cat), y = genlen, fill = as.factor(clgenes_h1cat))) +
+  geom_violin() +
+  geom_boxplot(width = 0.1, fill = 'white', outlier.shape = NA) +
   scale_y_log10() +
-  stat_compare_means()
+  stat_compare_means(label.x = 0.5, label.y = 6.5,hjust = 0) +
+  scale_fill_manual(values = ageonsetcolors) +
+  xlab ('Age of Onset Clusters') + ylab('Gene Length') +
+  guides(fill = F)
+
+ggsave('./results/functionalAnalysis/genelength_strict.pdf', units = 'cm', width = 8, height = 8, useDingbats = F)
+ggsave('./results/functionalAnalysis/genelength_strict.png', units = 'cm', width = 8, height = 8)
+
 
 ####
 
