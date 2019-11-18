@@ -80,6 +80,40 @@ cl3genes_h1cat = (genedat %>%
                     filter(ageonsetclusters == '3') %>%
                     filter(numdiscat > 1))$geneid
 
+allgenesx = unique(c(cl1genes, cl2genes, cl3genes, cl1genes_h1cat, cl2genes_h1cat, cl3genes_h1cat))
+martx = biomaRt::useMart('ensembl','hsapiens_gene_ensembl')
+genlen = biomaRt::getBM(attributes = c('ensembl_gene_id','start_position','end_position'), filters = 'ensembl_gene_id', values = allgenesx, mart = martx) %>%
+  mutate(genlen = abs(end_position-start_position)) %>%
+  rename(geneid = ensembl_gene_id) %>%
+  select(geneid, genlen)
+genlen$clgenes = 0
+genlen$clgenes[genlen$geneid%in%cl1genes] = 1
+genlen$clgenes[genlen$geneid%in%cl2genes] = 2
+genlen$clgenes[genlen$geneid%in%cl3genes] = 3
+genlen$clgenes_h1cat = 0
+genlen$clgenes_h1cat[genlen$geneid%in%cl1genes_h1cat] = 1
+genlen$clgenes_h1cat[genlen$geneid%in%cl2genes_h1cat] = 2
+genlen$clgenes_h1cat[genlen$geneid%in%cl3genes_h1cat] = 3
+
+genlen %>%
+  ggplot(aes(x = as.factor(clgenes), y = genlen, fill = as.factor(clgenes))) +
+  geom_violin() +
+  geom_boxplot(width = 0.1, fill = 'white', outlier.shape = NA) +
+  scale_y_log10() +
+  stat_compare_means(label.x = 0.5, label.y = 6.5,hjust = 0) +
+  scale_fill_manual(values = ageonsetcolors) +
+  xlab ('Age of Onset Clusters') + ylab('Gene Length') +
+  guides(fill = F)
+
+ggsave('./results/functionalAnalysis/genelength.pdf', units = 'cm', width = 8, height = 8, useDingbats = F)
+ggsave('./results/functionalAnalysis/genelength.png', units = 'cm', width = 8, height = 8)
+
+genlen %>%
+  ggplot(aes(x = as.factor(clgenes_h1cat), y = genlen)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  stat_compare_means()
+
 ####
 
 source('../shared/functions/functions.R')
