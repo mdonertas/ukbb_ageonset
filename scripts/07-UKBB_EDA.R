@@ -201,7 +201,8 @@ Age_at_death_bySex <- traits %>%
   scale_fill_manual(values = sexcolors)+
   geom_label(data = annotdf, x = 38, y= c(-45,45), aes( label = paste('N=',n,sep='')), hjust = c(0,1),
              color = "white", size = 8 / pntnorm)+
-  ylab('Number of Participants in 1000')+xlab('Age at death')+
+  ylab('Number of participants\n(in thousands)') +
+  xlab('Age at death')+
   coord_flip()+
   theme(legend.position = 'top')+
   scale_y_continuous(breaks=seq(-40,40,by=10),labels=abs(seq(-40,40,by=10)),limits = c(-45,45))+
@@ -229,7 +230,8 @@ Age_at_death <- traits %>%
   ggplot(aes(x=age,y=fracDead))+
   geom_bar(stat='identity',color='gray25')+
   geom_label(data = annotdf, x = 38, y= 250, aes( label = paste('N=',n,sep='')), hjust = c(0))+
-  ylab('Number of Participants in 1000')+xlab('Age at death')+
+  ylab('Number of participants\n(in thousands)') +
+  xlab('Age at death')+
   scale_x_continuous(breaks=seq(40,75,5))
 ggsave('./results/UKBB_EDA/Age_at_death.pdf', Age_at_death,useDingbats=F, height = 6,width = 6, units ="cm")
 ggsave('./results/UKBB_EDA/Age_at_death.png', Age_at_death, height = 6,width = 6, units ="cm")
