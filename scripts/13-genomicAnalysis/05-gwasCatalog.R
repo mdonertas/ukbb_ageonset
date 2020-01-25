@@ -6,7 +6,7 @@ disCoding <- setNames(disCoding$meaning,disCoding$node_id)
 #   filter(`P-VALUE`<=5e-8)
 ukbbgwascat <- read_tsv('./data/raw/gwas_cat.txt',col_names = 'ukbb_pubmed')
 gwascat <-  read_tsv('./data/raw/gwascat/gwas_catalog_v1.0.2-associations_e96_r2019-05-03.tsv') %>%
-  filter(PUBMEDID != ukbbgwascat$ukbb_pubmed) %>%
+  filter(!PUBMEDID %in% ukbbgwascat$ukbb_pubmed) %>%
   filter(`P-VALUE`<=5e-8)
 gwasassocs <- lapply(unique(unlist(strsplit(gwascat$MAPPED_TRAIT,', '))),function(tr){
   rowx=grep(tr,gwascat$MAPPED_TRAIT,ignore.case = T)
@@ -69,12 +69,14 @@ resx=reshape2::melt(resx,id.vars=colnames(resx[[1]]))%>%
   rename(disID=L1)%>%
   mutate(Disease = disCoding[disID])
 
-gwascat <- resx%>%
+gwascat <- resx %>%
   mutate(Percentage=x/(x+y))%>%
   rename(disease_and_gwascat=x,
          only_disease=y,
          only_gwascat=z,
-         allothers=w)
+         allothers=w) %>%
+  mutate(totdis = disease_and_gwascat + only_disease) %>%
+  filter(totdis>0) %>% select(-totdis)
 write_tsv(gwascat,'results/genomicAnalysis/gwascat_noMHC_ukbbremoved.tsv')
 
 myrank <- function(x){
@@ -106,3 +108,4 @@ pheatmap::pheatmap(xx,
                    # scale = 'column',
                    cellwidth = 10,cellheight = 10,
                    filename = 'results/genomicAnalysis/compare_with_GWASCat_allabove5_odds2_p005_ukbbremoved.pdf')
+save(list=ls(),file = './data/processed/gwascatcomparison.RData')
