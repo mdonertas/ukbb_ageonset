@@ -116,21 +116,33 @@ disCoding = disCoding[as.character(disIDs)]
 # 
 # saveRDS(signifSNPs,'./data/processed/evoAnalysis/UKBBRAF_Pleiotropy.rds')
 signifSNPs=readRDS('./data/processed/evoAnalysis/UKBBRAF_Pleiotropy.rds')
-
+library(ggthemes)
 numsnps = reshape2::melt((table(unique(select(signifSNPs,SNP,numDis,numCl))%>%select(-SNP)))) %>%
-  ggplot(aes(x = factor(numCl,levels = 1:3), y= factor(numDis,levels = 9:1))) +
-  geom_tile(aes(fill = log10(value))) +
-  scale_fill_gradient(low = 'gray90',high = 'gray25',na.value = 'white') +
-  geom_label(aes(label = scales::comma(value))) +
-  xlab('Number of Clusters') + ylab('Number of Diseases') +
-  theme_pubr(base_size = 14) +
+  mutate(value = ifelse(value ==0, NA, value)) %>%
+  mutate(numDis = paste('# Diseases = ', numDis, sep='')) %>%
+  ggplot(aes(x = as.factor(numCl), fill = as.factor(numCl), y = value)) +
+  geom_bar(stat = 'identity', position = 'dodge') +
+  geom_label(aes(label = scales::comma(value)), fill = 'white', y=0.5) +
+  facet_wrap(~numDis) + 
+  scale_y_log10(label = scales::comma) +
   guides(fill = F) +
-  theme(panel.grid.major = element_blank(), 
-        axis.line = element_blank(),
-        axis.ticks = element_blank())
+  xlab('Number of Clusters') + ylab('Number of SNPs (in log10 scale)') +
+  scale_fill_wsj()
 
-ggsave('./results/evoAnalysis/pleiotropy.pdf', units = 'cm', width = 8, height = 10, useDingbats = F)
-ggsave('./results/evoAnalysis/pleiotropy.png', units = 'cm', width = 8, height = 10)
+# numsnps = reshape2::melt((table(unique(select(signifSNPs,SNP,numDis,numCl))%>%select(-SNP)))) %>%
+#   ggplot(aes(x = factor(numCl,levels = 1:3), y= factor(numDis,levels = 9:1))) +
+#   geom_tile(aes(fill = log10(value))) +
+#   scale_fill_gradient(low = 'gray90',high = 'gray25',na.value = 'white') +
+#   geom_label(aes(label = scales::comma(value))) +
+#   xlab('Number of Clusters') + ylab('Number of Diseases') +
+#   theme_pubr(base_size = 14) +
+#   guides(fill = F) +
+#   theme(panel.grid.major = element_blank(), 
+#         axis.line = element_blank(),
+#         axis.ticks = element_blank())
+
+ggsave('./results/evoAnalysis/pleiotropy.pdf', numsnps, units = 'cm', width = 16, height = 12, useDingbats = F)
+ggsave('./results/evoAnalysis/pleiotropy.png', numsnps, units = 'cm', width = 16, height = 12)
 
 select(signifSNPs, SNP,cluster) %>%
   group_by(cluster) %>%
