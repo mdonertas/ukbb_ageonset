@@ -2,7 +2,11 @@ source('./scripts/00-setup.R')
 disIDs = gsub('a','',list.files('./results/caseControl/'))
 disCoding <- setNames(disCoding$meaning,disCoding$node_id)
 
-gwascat <-  read_tsv('../melike/projects/shared_data/GWASCatalog/20190607/data/raw/gwas_catalog_v1.0.2-associations_e96_r2019-05-03.tsv') %>%
+# gwascat <-  read_tsv('../melike/projects/shared_data/GWASCatalog/20190607/data/raw/gwas_catalog_v1.0.2-associations_e96_r2019-05-03.tsv') %>%
+#   filter(`P-VALUE`<=5e-8)
+ukbbgwascat <- read_tsv('./data/raw/gwas_cat.txt',col_names = 'ukbb_pubmed')
+gwascat <-  read_tsv('./data/raw/gwascat/gwas_catalog_v1.0.2-associations_e96_r2019-05-03.tsv') %>%
+  filter(PUBMEDID != ukbbgwascat$ukbb_pubmed) %>%
   filter(`P-VALUE`<=5e-8)
 gwasassocs <- lapply(unique(unlist(strsplit(gwascat$MAPPED_TRAIT,', '))),function(tr){
   rowx=grep(tr,gwascat$MAPPED_TRAIT,ignore.case = T)
@@ -13,6 +17,8 @@ gwasassocs <- lapply(unique(unlist(strsplit(gwascat$MAPPED_TRAIT,', '))),functio
   }
 })
 names(gwasassocs) <- unique(unlist(strsplit(gwascat$MAPPED_TRAIT,', ')))
+
+# gwasassocs <- readRDS('./data/processed/GWASCat/assocs_20190730.rds')
 
 proxygenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_proxyGenes.rds',sep=''),function(x){
   x=readRDS(x)
@@ -33,8 +39,9 @@ signifgenes <- sapply(disIDs,function(dis){
 })
 names(signifgenes)=disIDs
 
-allingwascat <- unique(unlist(strsplit(unlist(strsplit(gwascat$MAPPED_GENE,', ')),' - ')))
-allingwascat <- length(allingwascat)
+# allingwascat <- unique(unlist(strsplit(unlist(strsplit(gwascat$MAPPED_GENE,', ')),' - ')))
+# allingwascat <- length(allingwascat)
+allingwascat <- length(unique(unlist(gwasassocs)))
 
 resx <- lapply(signifgenes, function(disGene){
   t(sapply(gwasassocs,function(gcat){
@@ -68,7 +75,7 @@ gwascat <- resx%>%
          only_disease=y,
          only_gwascat=z,
          allothers=w)
-write_tsv(gwascat,'results/genomicAnalysis/gwascat_noMHC.tsv')
+write_tsv(gwascat,'results/genomicAnalysis/gwascat_noMHC_ukbbremoved.tsv')
 
 myrank <- function(x){
   su=sort(unique(x))
@@ -98,4 +105,4 @@ pheatmap::pheatmap(xx,
                    cutree_cols = 25,
                    # scale = 'column',
                    cellwidth = 10,cellheight = 10,
-                   filename = 'results/genomicAnalysis/compare_with_GWASCat_allabove5_odds2_p005.pdf')
+                   filename = 'results/genomicAnalysis/compare_with_GWASCat_allabove5_odds2_p005_ukbbremoved.pdf')
