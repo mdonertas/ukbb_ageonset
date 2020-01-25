@@ -96,6 +96,216 @@ for(i in 1:10){
 }
 dev.off()
 
+i=1
+as.character(unique(permRes$category)[i])
+# [1] "gastrointestinal/abdominal"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 27, useDingbats = F)
+
+i=2
+as.character(unique(permRes$category)[i])
+# [1] "immunological/systemic disorders"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 12, useDingbats = F)
+
+i=3
+as.character(unique(permRes$category)[i])
+# [1] "haematology/dermatology"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 12, useDingbats = F)
+
+i=4
+as.character(unique(permRes$category)[i])
+# "cardiovascular"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 22, useDingbats = F)
+
+i=5
+as.character(unique(permRes$category)[i])
+# [1] "neurology/eye/psychiatry"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 27, useDingbats = F)
+
+i=6
+as.character(unique(permRes$category)[i])
+# [1]  "musculoskeletal/trauma"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 32, useDingbats = F)
+
+i=7
+as.character(unique(permRes$category)[i])
+# [1]  "respiratory/ent"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 22, useDingbats = F)
+
+i=8
+as.character(unique(permRes$category)[i])
+# [1] "infections"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 7, useDingbats = F)
+
+i=9
+as.character(unique(permRes$category)[i])
+# [1] "renal/urology"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 12, useDingbats = F)
+
+i=10
+as.character(unique(permRes$category)[i])
+# [1] "endocrine/diabetes"
+permRes %>%
+  filter(category == as.character(unique(permRes$category)[i])) %>%
+  mutate(value = value/5) %>%
+  group_by(Disease, category, Age) %>%
+  summarise(mean = mean(value), sd = sd(value), 
+            fq = quantile(value,0.025), tq = quantile(value,0.975),
+            median = median(value)) %>% 
+  ggplot(aes(x = Age)) +
+  geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
+  geom_point(aes(y=median, color = category)) +
+  geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
+  facet_wrap(~Disease, scales = 'free', ncol = 4) +
+  ylab('Number of participants (in 10,000)') +
+  scale_color_manual(values = discatcolors) +
+  guides(color = F) +
+  ggtitle(as.character(unique(permRes$category)[i]))
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 12, useDingbats = F)
+
 medRate <- permRes %>%
   group_by(Disease, Age, category) %>%
   summarise(medRate = median(value))
@@ -203,12 +413,20 @@ allsummarised <- sumx %>%
 ggsave('./results/ageonset/allsummarised.pdf', allsummarised, units = 'cm', width = 18, height = 8, useDingbats = F)
 ggsave('./results/ageonset/allsummarised.png', allsummarised, units = 'cm', width = 18, height = 8)
 
-catsum <- sumx %>%
+
+xx = sumx %>%
   mutate(category = fct_reorder(category,-med)) %>%
-  ggplot(aes(x = category, y = med)) + 
-  geom_boxplot(aes(fill = category), outlier.shape = NA) +
+  group_by(category) %>%
+  summarise(`Disease Category` = length(unique(Disease))) %>%
+  mutate(`Disease Category` = paste(category,' (n=',`Disease Category`,')',sep='')) 
+discatcolors2 = discatcolors
+names(discatcolors2)=unname(setNames(xx$`Disease Category`,xx$category)[names(discatcolors2)])
+catsum <- left_join(xx,mutate(sumx,category = fct_reorder(category,-med))) %>%
+  mutate(`Disease Category` = fct_reorder(`Disease Category`,-med)) %>%
+  ggplot(aes(x = `Disease Category`, y = med)) + 
+  geom_boxplot(aes(fill = `Disease Category`), outlier.shape = NA) +
   geom_jitter(size = 1, alpha = 0.5, width = 0.2) +
-  scale_fill_manual(values = discatcolors)+
+  scale_fill_manual(values = discatcolors2)+
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         legend.position = 'right') +
@@ -308,3 +526,9 @@ pheatmap::pheatmap(overlapdat,
                    number_color = 'black', cellwidth = 20, cellheight = 20, 
                    filename = paste('./results/ageonset/age_cat_overlap.png',sep=''),
                    display_numbers = T, number_format = '%.0f')
+
+
+data.frame(disease = names(pc$clustering), cluster = pc$clustering) %>%
+  mutate(disease_category = disTreecl[as.character(disease)]) %>%
+  arrange(cluster) %>% 
+  write_tsv('./data/processed/ageonset/ageonset_clusters.tsv')
