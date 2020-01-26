@@ -10,18 +10,24 @@ length(unique(proxysignif$SNP))
 # yes so continue with only signif_gwasRes_proxyGenes.rds
 rm(proxyall,proxysignif)
 
-allSNPs = read_tsv('./data/processed/ukbb/gwas/bolt/a1071.imp.stats')
-totSNPnum = nrow(allSNPs)
+allSNPs = read_tsv('./data/processed/ukbb/gwas/bolt/a1071.imp.stats') %>%
+  mutate(snpid = paste(CHR,BP,ALLELE1,ALLELE0,sep='_')) %>%
+  mutate(snppos = paste(CHR,BP,sep='_'))
+totSNPnum = length(unique(allSNPs$snppos))
+totSNPnum
+# 9867043
 
 signifSNPs <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_proxyGenes.rds',sep=''),function(x){
   x=readRDS(x)
-  x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
-  setdiff(unique(x$SNP),c('',NA))
+  x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))%>%
+    mutate(snpid = paste(CHR,BP,Ref,Alt,sep='_')) %>%
+    mutate(snppos = paste(CHR,BP,sep='_'))
+  unique(x$snppos)
 })
 names(signifSNPs)=disIDs
-
 numSignif = sapply(signifSNPs,length)
-
+sum(numSignif==0)
+# 36
 numSignif = data.frame(numSignif) %>%
   mutate(disease = disCoding[names(signifSNPs)])
 
@@ -92,12 +98,13 @@ ggsave('./results/genomicAnalysis/numSNP_perDisease_byCategory.png', numSignif_b
 
 summary(numSignif$numSignif)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-# 0.0     0.0    13.5  1389.8   737.0 35008.0 
+# 0.0     0.0    13.5  1389.3   736.0 35001.0
 sum(numSignif$numSignif == 0)
 # [1] 36
 
 anova(lm(numSignif ~ ageonset_clusters, data = left_join(numSignif,disannot)))
 tapply(X = left_join(numSignif,disannot)$numSignif, INDEX = left_join(numSignif,disannot)$diseaseCategories,summary)
+tapply(X = left_join(numSignif,disannot)$numSignif, INDEX = left_join(numSignif,disannot)$ageonset,summary)
 ### 
 
 signifSNPs <- lapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_proxyGenes.rds',sep=''),function(x){
