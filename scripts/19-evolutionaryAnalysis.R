@@ -703,6 +703,7 @@ antagonistic_table = data.frame(clusters = c('cl1-cl2','cl1-cl3','cl2-cl3'),
                        cl2cl3_fi_exc$p.value)) %>%
   mutate(log2_odds = log2(odds_ratio),
          log2_odds_ind = log2(odds_ratio_ind))
+write_tsv(antagonistic_table,'./results/evoAnalysis/antagonistic_table.tsv')
 library(gridExtra)
 xx = tableGrob(antagonistic_table,rows=NULL)
 ggsave('./results/evoAnalysis/antagonistic.pdf',xx,units = 'cm',width=22,height = 4, useDingbats = F)
