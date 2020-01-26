@@ -132,15 +132,40 @@ cl3genes_h1cat = (genedat %>%
 aginggenes = readRDS('./data/processed/agingrelevance/aginggenes.rds')
 cellage = read_csv('./data/raw/cellage.csv')
 aginggenes = c(aginggenes,list(cellage$`Gene Name` ))
-allgenes = unique(signifGenes$geneid)
+
+eqtlgenes = readRDS('./data/processed/caseControl/a1071/gwasRes_eQTLGenes.rds')
+eqtlgenes = setdiff(unique(eqtlgenes$eQTL_hgnc),NA)
+proxygenes = readRDS('./data/processed/caseControl/a1071/gwasRes_proxyGenes.rds')
+proxygenes = setdiff(unique(proxygenes$proxy_hgnc),NA)
+
+allgenes = unique(c(eqtlgenes,proxygenes))
 genegr = list(cl1genes,cl2genes,cl3genes,
               cl1genes_h1cat,cl2genes_h1cat,cl3genes_h1cat)
+
+# resx = lapply(genegr,function(x){
+#   xx = t(sapply(aginggenes[c(1,2,7,8)],function(y){
+#     a = length(unique(x%in%y))
+#     b = length(unique(x)) - a
+#     c = length(unique(y)) - a
+#     d = length(unique(allgenes)) - a - b - c
+#     matx = matrix(c(a,b,c,d), ncol=2, byrow = T)
+#     fi = fisher.test(matx)
+#     c(a,b,c,d,fi$p,fi$est)
+#   }))
+#   rownames(xx) = c('human','model','drug','senescence')
+#   colnames(xx) = c('a','b','c','d','p','odds')
+#   xx
+# })
+# names(resx) = paste(rep(1:3,2),rep(c('','_strict'),each=3),sep='')
+
+aginggenes[[9]] = unique(unlist(aginggenes))
+
 permres = lapply(genegr,function(x){
-  xx = t(sapply(aginggenes[c(1,2,7,8)],function(y){
+  xx = t(sapply(aginggenes[c(1,2,7,8,9)],function(y){
     xx = sapply(1:10000,function(i){100*mean(sample(allgenes,length(x))%in%y)})
     c(perm=mean(xx),val=100*mean(x%in%y),p=mean(xx>=(100*mean(x%in%y))),num = sum(x%in%y),genesize = length(x), agsize = length(intersect(y,allgenes)))
   }))
-  rownames(xx) = c('human','model','drug','senescence')
+  rownames(xx) = c('human','model organism','drug','senescence','all-combined')
   xx
 })
 names(permres) = paste(rep(1:3,2),rep(c('','_strict'),each=3),sep='')
@@ -157,9 +182,10 @@ oddsplot = xx %>%
   geom_bar(aes(x = cluster, y= prop, fill=cluster), stat='identity', position = 'dodge') +
   facet_grid(~Aging) +
   scale_fill_manual(values = ageonsetcolors) +
-  geom_label(aes(label = num, x= cluster, y= prop))+
-  ylim(-2.6,2.6) +
-  geom_text(data =filter(filter(xx,type=='strict'),p<=0.1),aes(x=cluster,y=-0.01,label=scales::pvalue(p,add_p = T,accuracy = 0.001)), angle=90,color='black',hjust=1) +
+  geom_label(aes(label = num, x= cluster),y=0.2)+
+  # ylim(-3.5,3.5) +
+  geom_text(data =filter(filter(xx,type=='strict'),p<=0.05),aes(x=cluster,y=-0.01,label=scales::pvalue(p,add_p = T,accuracy = 0.001)), angle=90,color='black',hjust=1) +
+  # geom_text(data =filter(xx,type=='strict'),aes(x=cluster,y=-0.01,label=scales::pvalue(p,add_p = T,accuracy = 0.001)), angle=90,color='black',hjust=1) +
   xlab('Age of onset cluster') + ylab('Log2 Odds Ratio') +
   guides(fill = F)
 
@@ -169,13 +195,16 @@ odds_all = xx %>%
   geom_bar(aes(x = cluster, y= prop, fill=cluster), stat='identity', position = 'dodge') +
   facet_grid(~Aging) +
   scale_fill_manual(values = ageonsetcolors) +
-  geom_label(aes(label = num, x= cluster, y= prop))+
-  ylim(-1.2,1.2) +
-  geom_text(data =filter(filter(xx,type=='all'),p<=0.1),aes(x=cluster,y=-0.01,label=scales::pvalue(p,add_p = T,accuracy = 0.001)), angle=90,color='black',hjust=1) +
+  geom_label(aes(label = num, x= cluster),y=0.1)+
+  # ylim(-1.5,1.5) +
+  geom_text(data =filter(filter(xx,type=='all'),p<=0.05),aes(x=cluster,y=-0.01,label=scales::pvalue(p,add_p = T,accuracy = 0.001)), angle=90,color='black',hjust=1) +
+  # geom_text(data =filter(xx,type=='all'),aes(x=cluster,y=-0.01,label=scales::pvalue(p,add_p = T,accuracy = 0.001)), angle=90,color='black',hjust=1) +
   xlab('Age of onset cluster') + ylab('Log2 Odds Ratio') +
   guides(fill = F)
 
 oddsx = ggarrange(odds_all+ggtitle('Genes specific to one cluster'),oddsplot+ggtitle('Genes specific to one cluster and linked to multiple categories'),labels = 'auto',nrow=2)
 
-ggsave('./results/agingRelevance/genage.pdf',oddsx,units ='cm',width = 15,height = 20,useDingbats=F)
-ggsave('./results/agingRelevance/genage.png',oddsx,units ='cm',width = 15,height = 20)
+system('mkdir ./results/agingRelevance/')
+ggsave('./results/agingRelevance/genage2.pdf',oddsx,units ='cm',width = 15,height = 20,useDingbats=F)
+ggsave('./results/agingRelevance/genage2.png',oddsx,units ='cm',width = 15,height = 20)
+
