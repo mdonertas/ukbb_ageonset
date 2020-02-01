@@ -5,14 +5,14 @@ disCoding <- setNames(disCoding$meaning,disCoding$node_id)
 proxyGenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_proxyGenes.rds',sep=''),function(x){
   x=readRDS(x)
   x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
-  setdiff(unique(x$proxy_ensembl),c('',NA))
+  setdiff(unique(x$proxy_ensembl),c('',' ',NA))
 })
 names(proxyGenes)=disIDs
 
 eqtlGenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_eQTLGenes.rds',sep=''),function(x){
   x=readRDS(x)
   x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
-  setdiff(unique(x$eQTL_ensembl),c('',NA))
+  setdiff(unique(x$eQTL_ensembl),c('',' ', NA))
 })
 names(eqtlGenes)=disIDs
 
@@ -34,6 +34,7 @@ signifGenes <- signifGenes %>%
 rm(proxyGenes,eqtlGenes)
 
 ageonsetsum = signifGenes %>%
+  filter(ageonset!='4') %>%
   group_by(geneid) %>%
   summarise(ageonsetclusters = paste(sort(unique(ageonset)),collapse = '-',sep='-'),
             numagecluster = length(unique(ageonset))) %>%
@@ -56,508 +57,231 @@ genedat = full_join(dissum,full_join(ageonsetsum,discatsum)) %>%
 
 rm(ageonsetsum,discatsum,dissum)
 
-cl1genes= (genedat %>%
-             filter(ageonsetclusters == '1') %>%
-             filter(numdiscat > 0))$geneid
+genegrs = genedat %>%
+  mutate(monedis = numdiseases>1,
+         monecat = numdiscat>1) %>%
+  group_by(ageonsetclusters,monedis,monecat) %>%
+  summarise(genelist = list(sort(unique(geneid))),
+            numgenes = length(unique(geneid))) %>%
+  filter(ageonsetclusters %in% c('1','2','3','1-2','1-2-3','1-3','2-3'))%>%
+  filter(monedis | monecat) %>%
+  mutate(name = paste('cl',ageonsetclusters,'_',c('Multidisease','Multicategory')[1+monecat],sep=''))
 
-cl2genes = (genedat %>%
-              filter(ageonsetclusters == '2') %>%
-              filter(numdiscat > 0))$geneid
+genegrs[1,]$genelist = list(unique(unlist(c(genegrs[1,]$genelist,genegrs[2,]$genelist))))
+genegrs[1,]$numgenes = genegrs[1,]$numgenes + genegrs[2,]$numgenes
 
-cl3genes= (genedat %>%
-             filter(ageonsetclusters == '3') %>%
-             filter(numdiscat > 0))$geneid
+genegrs[3,]$genelist = list(unique(unlist(c(genegrs[3,]$genelist,genegrs[4,]$genelist))))
+genegrs[3,]$numgenes = genegrs[3,]$numgenes + genegrs[4,]$numgenes
 
-cl1genes_h1cat = (genedat %>%
-                    filter(ageonsetclusters == '1') %>%
-                    filter(numdiscat > 1))$geneid
+genegrs[7,]$genelist = list(unique(unlist(c(genegrs[7,]$genelist,genegrs[8,]$genelist))))
+genegrs[7,]$numgenes = genegrs[7,]$numgenes + genegrs[8,]$numgenes
 
-cl2genes_h1cat = (genedat %>%
-                    filter(ageonsetclusters == '2') %>%
-                    filter(numdiscat > 1))$geneid
+genegrs[9,]$genelist = list(unique(unlist(c(genegrs[9,]$genelist,genegrs[10,]$genelist))))
+genegrs[9,]$numgenes = genegrs[9,]$numgenes + genegrs[10,]$numgenes
 
-cl3genes_h1cat = (genedat %>%
-                    filter(ageonsetclusters == '3') %>%
-                    filter(numdiscat > 1))$geneid
+genegrs[11,]$genelist = list(unique(unlist(c(genegrs[11,]$genelist,genegrs[12,]$genelist))))
+genegrs[11,]$numgenes = genegrs[11,]$numgenes + genegrs[12,]$numgenes
 
-allgenesx = unique(c(cl1genes, cl2genes, cl3genes, cl1genes_h1cat, cl2genes_h1cat, cl3genes_h1cat))
-martx = biomaRt::useMart('ensembl','hsapiens_gene_ensembl')
-genlen = biomaRt::getBM(attributes = c('ensembl_gene_id','start_position','end_position'), filters = 'ensembl_gene_id', values = allgenesx, mart = martx) %>%
-  mutate(genlen = abs(end_position-start_position)) %>%
-  rename(geneid = ensembl_gene_id) %>%
-  select(geneid, genlen)
-genlen$clgenes = 0
-genlen$clgenes[genlen$geneid%in%cl1genes] = 1
-genlen$clgenes[genlen$geneid%in%cl2genes] = 2
-genlen$clgenes[genlen$geneid%in%cl3genes] = 3
-genlen$clgenes_h1cat = 0
-genlen$clgenes_h1cat[genlen$geneid%in%cl1genes_h1cat] = 1
-genlen$clgenes_h1cat[genlen$geneid%in%cl2genes_h1cat] = 2
-genlen$clgenes_h1cat[genlen$geneid%in%cl3genes_h1cat] = 3
+saveRDS(genegrs,file='./data/processed/clustergenes_ensembl.rds')
 
-genlen %>%
-  ggplot(aes(x = as.factor(clgenes), y = genlen, fill = as.factor(clgenes))) +
-  geom_violin() +
-  geom_boxplot(width = 0.1, fill = 'white', outlier.shape = NA) +
-  scale_y_log10() +
-  stat_compare_means(label.x = 0.5, label.y = 6.5,hjust = 0) +
-  scale_fill_manual(values = ageonsetcolors) +
-  xlab ('Age of Onset Clusters') + ylab('Gene Length') +
-  guides(fill = F)
+eqtlgenes = readRDS('./data/processed/caseControl/a1071/gwasRes_eQTLGenes.rds')
+eqtlgenes = setdiff(unique(eqtlgenes$eQTL_ensembl),NA)
+proxygenes = readRDS('./data/processed/caseControl/a1071/gwasRes_proxyGenes.rds')
+proxygenes = setdiff(unique(proxygenes$proxy_ensembl),NA)
 
-ggsave('./results/functionalAnalysis/genelength.pdf', units = 'cm', width = 8, height = 8, useDingbats = F)
-ggsave('./results/functionalAnalysis/genelength.png', units = 'cm', width = 8, height = 8)
+allgenes = unique(c(eqtlgenes,proxygenes))
+rm(eqtlgenes,proxygenes)
+allgenes = setdiff(allgenes,c(""," ",NA))
 
-genlen %>%
-  # filter(clgenes_h1cat !=0) %>%
-  ggplot(aes(x = as.factor(clgenes_h1cat), y = genlen, fill = as.factor(clgenes_h1cat))) +
-  geom_violin() +
-  geom_boxplot(width = 0.1, fill = 'white', outlier.shape = NA) +
-  scale_y_log10() +
-  stat_compare_means(label.x = 0.5, label.y = 6.5,hjust = 0) +
-  scale_fill_manual(values = ageonsetcolors) +
-  xlab ('Age of Onset Clusters') + ylab('Gene Length') +
-  guides(fill = F)
+genegr = setNames(genegrs$genelist,genegrs$name)
+library(goseq)
+allgo=getgo(allgenes,"hg19","ensGene")
+allgo = allgo[!sapply(allgo,is.null)]
+allgo = reshape2::melt(allgo) %>%
+  set_names(c('category','gene'))
 
-ggsave('./results/functionalAnalysis/genelength_strict.pdf', units = 'cm', width = 8, height = 8, useDingbats = F)
-ggsave('./results/functionalAnalysis/genelength_strict.png', units = 'cm', width = 8, height = 8)
+GOres = lapply(genegr,function(x){
+  gnsl = setNames(rep(0,length(allgenes)),allgenes)
+  gnsl[names(gnsl)%in%x]=1
+  pwf=nullp(gnsl,"hg19","ensGene")
+  goseq(pwf,"hg19","ensGene")
+})
 
+GOres2 = reshape2::melt(GOres,id.vars = colnames(GOres[[1]])) %>%
+  rename(L1='name') %>%
+  left_join(dplyr::select(genegrs,numgenes,name)) %>%
+  rename(numgenes= 'numGenes') %>%
+  separate(name,into=c('cluster','type'),sep='_',remove = F) %>%
+  mutate(allgenenum = length(allgenes)) %>%
+  filter(numInCat >= 10 & numInCat <=500) %>%
+  mutate(over_rep_padj = p.adjust(over_represented_pvalue, method='BY'),
+         under_rep_padj = p.adjust(under_represented_pvalue, method='BY')) %>%
+  mutate(a = numDEInCat) %>%
+  mutate(b = numGenes - a) %>% 
+  mutate(c = numInCat-a) %>%
+  mutate(d = allgenenum -a - b - c) %>%
+  mutate(enrichScore = (a/b)/(c/d)) %>%
+  mutate(log2enrich = log2(enrichScore)) %>%
+  mutate(cluster=gsub('cl','',cluster)) %>%
+  mutate(cluster = factor(cluster, levels = c('1','2','3','1-2','1-3','2-3','1-2-3'))) %>%
+  mutate(type = factor(type,levels = c('Multidisease','Multicategory')))
 
-####
+signifGO = GOres2 %>% 
+  filter(over_rep_padj<=0.05 | under_rep_padj<=0.05)
+signifGO %>%filter(cluster=='1' ) %>% View()
+signifGO_genes = left_join(signifGO,allgo)
 
-source('../shared/functions/functions.R')
+signifGO_genes$gene_cluster = sapply(signifGO_genes$gene,function(x){
+  nm = unique(sapply(strsplit(names(which(sapply(genegr,function(y)x%in%y))),'_'),function(x)x[1]))
+  ifelse(length(nm)==0,'-',gsub('cl','',nm))
+})
 
-gnls=unique(signifGenes$geneid)
-genex = setNames(rep(0,length(gnls)),gnls)
-genex[names(genex) %in% cl1genes] = 1
-genex[names(genex) %in% cl2genes] = 2
-genex[names(genex) %in% cl3genes] = 3
-bpres_cl1 = go_enrich.test(genelist = genex, selection = function(x)x==1) %>% 
-  mutate(cluster = '1', ontology = 'BP')
-bpres_cl2 = go_enrich.test(genelist = genex, selection = function(x)x==2) %>% 
-  mutate(cluster = '2', ontology = 'BP')
-bpres_cl3 = go_enrich.test(genelist = genex, selection = function(x)x==3) %>% 
-  mutate(cluster = '3', ontology = 'BP')
-mfres_cl1 = go_enrich.test(genelist = genex, selection = function(x)x==1, ontologyx = 'MF') %>% 
-  mutate(cluster = '1', ontology = 'MF')
-mfres_cl2 = go_enrich.test(genelist = genex, selection = function(x)x==2, ontologyx = 'MF') %>% 
-  mutate(cluster = '2', ontology = 'MF')
-mfres_cl3 = go_enrich.test(genelist = genex, selection = function(x)x==3, ontologyx = 'MF') %>% 
-  mutate(cluster = '3', ontology = 'MF')
-ccres_cl1 = go_enrich.test(genelist = genex, selection = function(x)x==1, ontologyx = 'CC') %>% 
-  mutate(cluster = '1', ontology = 'CC')
-ccres_cl2 = go_enrich.test(genelist = genex, selection = function(x)x==2, ontologyx = 'CC') %>% 
-  mutate(cluster = '2', ontology = 'CC')
-ccres_cl3 = go_enrich.test(genelist = genex, selection = function(x)x==3, ontologyx = 'CC') %>% 
-  mutate(cluster = '3', ontology = 'CC')
+gogenemat = signifGO_genes %>% 
+  filter(gene_cluster!='-') %>%
+  dplyr::select(category, gene) %>%
+  unique() %>%
+  mutate(value = 1) %>%
+  spread(category, value, fill = 0)
 
-gores = rbind(bpres_cl1,bpres_cl2,bpres_cl3,
-              mfres_cl1,mfres_cl2,mfres_cl3,
-              ccres_cl1,ccres_cl2,ccres_cl3) %>%
-  filter(Annotated<=500 & Annotated>=5)
-gores = gores %>% 
-  mutate(p.adjusted = p.adjust(classicFisher, method='fdr'))
-gores %>%
-  dplyr::select(-genelist) %>%
-  arrange(p.adjusted) %>%
-  write_tsv('./results/functionalAnalysis/clusterXgenes.tsv')
-p.val = 0.05
+gogenemat = as.data.frame(gogenemat)
+rownames(gogenemat) = gogenemat$gene
+gogenemat$gene = NULL
+gogenemat = as.matrix(gogenemat)
+library(pheatmap)
+jaccardsim = apply(gogenemat,2,function(x){
+  apply(gogenemat,2,function(y){
+    sum(x==1 & y==1) / sum(x==1 | y==1)
+  })
+})
+newdf = data.frame()
+for(ont in c('BP','MF','CC')){
+  for(cl in c('1','2','3','1-2','1-3','2-3','1-2-3')) {
+    print(c(ont,cl))
+    gocatx = (signifGO %>% filter(ontology == ont & cluster == cl))
+    gocat= unique(gocatx$category)
+    if(length(gocat)==0){
+      
+    } else if( length(gocat)==1){
+      newdf = rbind(newdf, mutate(gocatx,rep=gocat))
+    } else {
+      simmat = jaccardsim[gocat,gocat]
+      k = min(which(sapply(1:(nrow(simmat)),function(i){
+        mycl = cutree(hclust(dist(simmat)),i)
+        all(sapply(1:i,function(k){
+          xx = names(which(mycl==k))
+          if(length(xx)==1){
+            return(1)
+          } else {
+            xx = simmat[xx,xx]
+            median(xx[upper.tri(xx)]) 
+          }
+        })>=0.5)
+      })))
+      k=ifelse(k==1,nrow(simmat),k)
+      treex =hclust(dist(simmat))
+      treecl = cutree(treex,k)
+      reps = sapply(1:k,function(i){
+        xx=names(which(treecl==i))
+        if(length(xx)>1){
+          xx = simmat[xx,xx]
+          names(which.max(rowMeans(xx)))
+        } else{
+          xx
+        }
+      })
+      repclus=setNames(lapply(1:k,function(i)names(which(treecl==i))),reps)
+      newdf = rbind(newdf, reshape2::melt(repclus) %>% 
+                      set_names(c('category','rep')) %>%
+                      arrange(rep) %>% 
+                      mutate(ontology = ont, cluster = cl) %>%
+                      left_join(signifGO) %>%
+                      unique() %>%
+                      dplyr::select(1,3:23,2))
+    }}}
 
-enrichment_table=dplyr::filter(gores, cluster=='1')
-enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
-enrichment_table$Gr = c(rep('Detection of stimulus',6),
-                        rep('Other',1),
-                        rep('GPCR',1),
-                        rep('Lipoprotein-related functions',3),
-                        rep('Other',1),
-                        rep('Lipoprotein-related functions',1),
-                        rep('Morphogenesis Differentiation',1),
-                        rep('Detection of stimulus',1),
-                        rep('Other',1),
-                        rep('Morphogenesis Differentiation',1),
-                        rep('Other',1),
-                        rep('Morphogenesis Differentiation',1),
-                        rep('Detection of stimulus',1),
-                        rep('GPCR',1),
-                        rep('Morphogenesis Differentiation',1),
-                        rep('Blood circulation',1),
-                        rep('Other',2),
-                        rep('Blood circulation',1),
-                        rep('GPCR',1),
-                        rep('Detection of stimulus',1),
-                        rep('Other',1))
-mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
-mygraph=graph_from_data_frame(mymat)
-gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
-verttype=gr
-verttype[grep('ENSG',names(V(mygraph)))]='Gene'
-verttype = setNames(verttype,names(V(mygraph)))
-verttype=as.factor(verttype)
-vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
-vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
-vertsize=ceiling(vertsize)
-labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
-labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
-verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
-V(mygraph)$verttype = verttype
-# vertsize[verttype=='Gene'] = 0.5
-V(mygraph)$vertsize = vertsize
-# gr = gr[complete.cases(gr)]
-library(ggforce)
-labx[verttype!='Other']=''
-# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
-#   xx = verttype[!verttype%in%c('Gene','Other')]
-#   sample(names(xx)[xx==x],1)
-# })
-# labx[xx]=names(xx)
-labx[labx=='']=NA
-cl1_go=ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
-  geom_point(aes(fill = verttype), 
-             size = vertsize,
-             shape = c(23,21)[1+(verttype=='Gene')],
-             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
-  geom_text(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
-  scale_fill_brewer(type = 'qual',palette = 6)+
-  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
-  theme_void() +
-  theme(legend.position = 'bottom')
-# system('mkdir ./results/functionalAnalysis')
-ggsave('./results/functionalAnalysis/cl1_go.pdf',cl1_go, units = 'cm', width = 16.7,height = 10, useDingbats = F)
-ggsave('./results/functionalAnalysis/cl1_go.png',cl1_go, units = 'cm', width = 16.7,height = 10)
+d1 = newdf %>%
+  filter(rep==category) %>% 
+  filter(cluster=='1') %>%
+  mutate(termname = ifelse(nchar(term)>40,paste(substr(term,1,37),'...',sep=''),term)) %>%
+  unique()
+d2 = newdf %>%
+  filter(rep==category) %>% 
+  filter(cluster=='2') %>%
+  mutate(termname = ifelse(nchar(term)>40,paste(substr(term,1,37),'...',sep=''),term)) %>%
+  unique()
+d3 = newdf %>%
+  filter(rep==category) %>% 
+  filter(cluster=='3') %>%
+  mutate(termname = ifelse(nchar(term)>40,paste(substr(term,1,37),'...',sep=''),term)) %>%
+  unique()
+d12 = newdf %>%
+  filter(rep==category) %>% 
+  filter(cluster=='1-2') %>%
+  mutate(termname = ifelse(nchar(term)>40,paste(substr(term,1,37),'...',sep=''),term)) %>%
+  unique()
+d123 = newdf %>%
+  filter(rep==category) %>% 
+  filter(cluster=='1-2-3') %>%
+  mutate(termname = ifelse(nchar(term)>40,paste(substr(term,1,37),'...',sep=''),term)) %>%
+  unique()
 
-enrichment_table=dplyr::filter(gores, cluster=='2')
-enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
-# enrichment_table$Gr = c(rep('Detection of stimulus',6),
-#                         rep('Other',1),
-#                         rep('GPCR',1),
-#                         rep('Lipoprotein-related functions',3),
-#                         rep('Other',1),
-#                         rep('Lipoprotein-related functions',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('Other',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Other',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('GPCR',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Blood circulation',1),
-#                         rep('Other',2),
-#                         rep('Blood circulation',1),
-#                         rep('GPCR',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('Other',1))
-mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
-mygraph=graph_from_data_frame(mymat)
-# gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
-verttype=rep('GO.ID',length(V(mygraph)))
-verttype[grep('ENSG',names(V(mygraph)))]='Gene'
-verttype = setNames(verttype,names(V(mygraph)))
-verttype=as.factor(verttype)
-vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
-vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
-vertsize=ceiling(vertsize)
-labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
-labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
-# verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
-V(mygraph)$verttype = verttype
-# vertsize[verttype=='Gene'] = 0.5
-V(mygraph)$vertsize = vertsize
-# gr = gr[complete.cases(gr)]
-library(ggforce)
-# labx[verttype!='Other']=''
-# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
-#   xx = verttype[!verttype%in%c('Gene','Other')]
-#   sample(names(xx)[xx==x],1)
-# })
-# labx[xx]=names(xx)
-# labx[labx=='']=NA
-cl2_go = ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
-  geom_point(aes(fill = verttype), 
-             size = vertsize,
-             shape = c(23,21)[1+(verttype=='Gene')],
-             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
-  geom_text_repel(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
-  scale_fill_brewer(type = 'qual',palette = 6)+
-  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
-  theme_void() +
-  theme(legend.position = 'bottom')
-# system('mkdir ./results/functionalAnalysis')
-ggsave('./results/functionalAnalysis/cl2_go.pdf',cl2_go, units = 'cm', width = 8,height = 8, useDingbats = F)
-ggsave('./results/functionalAnalysis/cl2_go.png',cl2_go, units = 'cm', width = 8,height = 8)
+p1 = ggplot(d1, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=type)) +
+  geom_bar(stat='identity',position=position_dodge2(preserve = "single",padding = 0)) +
+  coord_flip() +
+  ylab('Log2 Enrichment Score') +
+  xlab(NULL) +
+  scale_fill_brewer(type='qual',palette=3) +
+  ggtitle('Cluster 1') +
+  ylim(0,7.1) +
+  theme_pubr(base_size = 6)
+p2 = ggplot(d2, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=type)) +
+  geom_bar(stat='identity',position=position_dodge2(preserve = "single",padding = 0)) +
+  coord_flip() +
+  ylab('Log2 Enrichment Score') +
+  xlab(NULL) +
+  scale_fill_brewer(type='qual',palette=3) +
+  ggtitle('Cluster 2')+
+  ylim(0,7.1)+
+  theme_pubr(base_size = 6)
+p3 = ggplot(d3, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=type)) +
+  geom_bar(stat='identity',position=position_dodge2(preserve = "single",padding = 0)) +
+  coord_flip() +
+  ylab('Log2 Enrichment Score') +
+  xlab(NULL) +
+  scale_fill_brewer(type='qual',palette=3) +
+  ggtitle('Cluster 3')+
+  ylim(0,7.1)+
+  theme_pubr(base_size = 6)
+p12 = ggplot(d12, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=type)) +
+  geom_bar(stat='identity',position=position_dodge2(preserve = "single",padding = 0)) +
+  coord_flip() +
+  ylab('Log2 Enrichment Score') +
+  xlab(NULL) +
+  scale_fill_brewer(type='qual',palette=3) +
+  ggtitle('Cluster 1 & 2')+
+  ylim(0,7.1)+
+  theme_pubr(base_size = 6)
+p123 = ggplot(d123, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=type)) +
+  geom_bar(stat='identity',position=position_dodge2(preserve = "single",padding = 0)) +
+  coord_flip() +
+  ylab('Log2 Enrichment Score') +
+  xlab(NULL) +
+  scale_fill_brewer(type='qual',palette=3) +
+  ggtitle('Cluster 1 & 2 & 3')+
+  ylim(0,7.1)+
+  theme_pubr(base_size = 6)
 
-enrichment_table=dplyr::filter(gores, cluster=='3')
-enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
-# enrichment_table$Gr = c(rep('Detection of stimulus',6),
-#                         rep('Other',1),
-#                         rep('GPCR',1),
-#                         rep('Lipoprotein-related functions',3),
-#                         rep('Other',1),
-#                         rep('Lipoprotein-related functions',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('Other',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Other',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('GPCR',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Blood circulation',1),
-#                         rep('Other',2),
-#                         rep('Blood circulation',1),
-#                         rep('GPCR',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('Other',1))
-mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
-mygraph=graph_from_data_frame(mymat)
-# gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
-verttype=rep('GO.ID',length(V(mygraph)))
-verttype[grep('ENSG',names(V(mygraph)))]='Gene'
-verttype = setNames(verttype,names(V(mygraph)))
-verttype=as.factor(verttype)
-vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
-vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
-vertsize=ceiling(vertsize)
-labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
-labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
-# verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
-V(mygraph)$verttype = verttype
-# vertsize[verttype=='Gene'] = 0.5
-V(mygraph)$vertsize = vertsize
-# gr = gr[complete.cases(gr)]
-library(ggforce)
-# labx[verttype!='Other']=''
-# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
-#   xx = verttype[!verttype%in%c('Gene','Other')]
-#   sample(names(xx)[xx==x],1)
-# })
-# labx[xx]=names(xx)
-# labx[labx=='']=NA
-cl3_go = ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
-  geom_point(aes(fill = verttype), 
-             size = vertsize,
-             shape = c(23,21)[1+(verttype=='Gene')],
-             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
-  # geom_text(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
-  scale_fill_brewer(type = 'qual',palette = 6)+
-  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
-  theme_void() +
-  theme(legend.position = 'bottom')
-# system('mkdir ./results/functionalAnalysis')
-ggsave('./results/functionalAnalysis/cl3_go.pdf',cl3_go, units = 'cm', width = 8,height = 8, useDingbats = F)
-ggsave('./results/functionalAnalysis/cl3_go.png',cl3_go, units = 'cm', width = 8,height = 8)
+px1 = ggarrange(p1,p2,ncol=1,nrow=2, heights = c(4,1),align='v',common.legend = T, legend='none')
+px2 = p3
+px12 = ggarrange(px1,px2,ncol=2,nrow=1,common.legend = T,legend='none')
+px3=ggarrange(p12,p123,ncol=1,nrow=2,align='v',heights = c(1.2,1),legend='none')
+pxfin=ggarrange(px12,px3,ncol=2,nrow=1,widths = c(2,1))
+ggsave('./results/functionalAnalysis/gores_final.pdf',units='cm',width=20,height = 10,useDingbats = F)
+ggsave('./results/functionalAnalysis/gores_final.png',units='cm',width=20,height = 10)
 
+newdf %>%
+  write_csv('./results/functionalAnalysis/gores_signif_reps.csv')
 
-gnls=unique(signifGenes$geneid)
-genex = setNames(rep(0,length(gnls)),gnls)
-genex[names(genex) %in% cl1genes_h1cat] = 1
-genex[names(genex) %in% cl2genes_h1cat] = 2
-genex[names(genex) %in% cl3genes_h1cat] = 3
-bpres_cl1_h1 = go_enrich.test(genelist = genex, selection = function(x)x==1) %>% 
-  mutate(cluster = '1', ontology = 'BP')
-bpres_cl2_h1 = go_enrich.test(genelist = genex, selection = function(x)x==2) %>% 
-  mutate(cluster = '2', ontology = 'BP')
-bpres_cl3_h1 = go_enrich.test(genelist = genex, selection = function(x)x==3) %>% 
-  mutate(cluster = '3', ontology = 'BP')
-mfres_cl1_h1 = go_enrich.test(genelist = genex, selection = function(x)x==1, ontologyx = 'MF') %>% 
-  mutate(cluster = '1', ontology = 'MF')
-mfres_cl2_h1 = go_enrich.test(genelist = genex, selection = function(x)x==2, ontologyx = 'MF') %>% 
-  mutate(cluster = '2', ontology = 'MF')
-mfres_cl3_h1 = go_enrich.test(genelist = genex, selection = function(x)x==3, ontologyx = 'MF') %>% 
-  mutate(cluster = '3', ontology = 'MF')
-ccres_cl1_h1 = go_enrich.test(genelist = genex, selection = function(x)x==1, ontologyx = 'CC') %>% 
-  mutate(cluster = '1', ontology = 'CC')
-ccres_cl2_h1 = go_enrich.test(genelist = genex, selection = function(x)x==2, ontologyx = 'CC') %>% 
-  mutate(cluster = '2', ontology = 'CC')
-ccres_cl3_h1 = go_enrich.test(genelist = genex, selection = function(x)x==3, ontologyx = 'CC') %>% 
-  mutate(cluster = '3', ontology = 'CC')
-
-gores = rbind(bpres_cl1_h1,bpres_cl2_h1,bpres_cl3_h1,
-              mfres_cl1_h1,mfres_cl2_h1,mfres_cl3_h1,
-              ccres_cl1_h1,ccres_cl2_h1,ccres_cl3_h1) %>%
-  filter(Annotated<=500 & Annotated>=5)
-gores = gores %>% 
-  mutate(p.adjusted = p.adjust(classicFisher, method='fdr'))
-gores %>%
-  dplyr::select(-genelist) %>%
-  arrange(p.adjusted) %>%
-  write_tsv('./results/functionalAnalysis/strict_clusterXgenes.tsv')
-
-p.val = 0.05
-
-enrichment_table=dplyr::filter(gores, cluster=='1')
-enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
-enrichment_table$Gr = c(rep('Protein Binding',1),
-                        rep('Cell Cycle',3),
-                        rep('Other',2),
-                        rep('Cell Cycle',5),
-                        rep('Protein Binding',1),
-                        rep('Cell Cycle',1),
-                        rep('Protein Binding',1),
-                        rep('Cell Cycle',1),
-                        rep('Other',2),
-                        rep('Cell Cycle',2))
-mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
-mygraph=graph_from_data_frame(mymat)
-gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
-verttype=gr
-verttype[grep('ENSG',names(V(mygraph)))]='Gene'
-verttype = setNames(verttype,names(V(mygraph)))
-verttype=as.factor(verttype)
-vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
-vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
-vertsize=ceiling(vertsize)
-labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
-labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
-verttype = factor(verttype,levels = levels(verttype)[c(2,1,4,3)])
-V(mygraph)$verttype = verttype
-# vertsize[verttype=='Gene'] = 0.5
-V(mygraph)$vertsize = vertsize
-# gr = gr[complete.cases(gr)]
-library(ggforce)
-labx[verttype!='Other']=''
-# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
-#   xx = verttype[!verttype%in%c('Gene','Other')]
-#   sample(names(xx)[xx==x],1)
-# })
-# labx[xx]=names(xx)
-labx[labx=='']=NA
-cl1_go=ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
-  geom_point(aes(fill = verttype), 
-             size = vertsize*2,
-             shape = c(23,21)[1+(verttype=='Gene')],
-             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
-  geom_text_repel(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
-  scale_fill_brewer(type = 'qual',palette = 6)+
-  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
-  theme_void() +
-  theme(legend.position = 'bottom')
-# system('mkdir ./results/functionalAnalysis')
-ggsave('./results/functionalAnalysis/cl1_h1_go.pdf',cl1_go, units = 'cm', width = 8,height = 8, useDingbats = F)
-ggsave('./results/functionalAnalysis/cl1_h1_go.png',cl1_go, units = 'cm', width = 8,height = 8)
-
-enrichment_table=dplyr::filter(gores, cluster=='2')
-enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
-# enrichment_table$Gr = c(rep('Detection of stimulus',6),
-#                         rep('Other',1),
-#                         rep('GPCR',1),
-#                         rep('Lipoprotein-related functions',3),
-#                         rep('Other',1),
-#                         rep('Lipoprotein-related functions',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('Other',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Other',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('GPCR',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Blood circulation',1),
-#                         rep('Other',2),
-#                         rep('Blood circulation',1),
-#                         rep('GPCR',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('Other',1))
-mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
-mygraph=graph_from_data_frame(mymat)
-# gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
-verttype=rep('GO.ID',length(V(mygraph)))
-verttype[grep('ENSG',names(V(mygraph)))]='Gene'
-verttype = setNames(verttype,names(V(mygraph)))
-verttype=as.factor(verttype)
-vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
-vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
-vertsize=ceiling(vertsize)
-labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
-labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
-# verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
-V(mygraph)$verttype = verttype
-# vertsize[verttype=='Gene'] = 0.5
-V(mygraph)$vertsize = vertsize
-# gr = gr[complete.cases(gr)]
-library(ggforce)
-# labx[verttype!='Other']=''
-# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
-#   xx = verttype[!verttype%in%c('Gene','Other')]
-#   sample(names(xx)[xx==x],1)
-# })
-# labx[xx]=names(xx)
-# labx[labx=='']=NA
-cl2_go = ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
-  geom_point(aes(fill = verttype), 
-             size = vertsize,
-             shape = c(23,21)[1+(verttype=='Gene')],
-             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
-  geom_text_repel(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
-  scale_fill_brewer(type = 'qual',palette = 6)+
-  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
-  theme_void() +
-  theme(legend.position = 'bottom')
-# system('mkdir ./results/functionalAnalysis')
-ggsave('./results/functionalAnalysis/cl2_h1_go.pdf',cl2_go, units = 'cm', width = 8,height = 8, useDingbats = F)
-ggsave('./results/functionalAnalysis/cl2_h1_go.png',cl2_go, units = 'cm', width = 8,height = 8)
-
-enrichment_table=dplyr::filter(gores, cluster=='3')
-enrichment_table=enrichment_table[enrichment_table$p.adjusted<p.val,]
-# enrichment_table$Gr = c(rep('Detection of stimulus',6),
-#                         rep('Other',1),
-#                         rep('GPCR',1),
-#                         rep('Lipoprotein-related functions',3),
-#                         rep('Other',1),
-#                         rep('Lipoprotein-related functions',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('Other',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Other',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('GPCR',1),
-#                         rep('Morphogenesis Differentiation',1),
-#                         rep('Blood circulation',1),
-#                         rep('Other',2),
-#                         rep('Blood circulation',1),
-#                         rep('GPCR',1),
-#                         rep('Detection of stimulus',1),
-#                         rep('Other',1))
-mymat=melt(setNames(enrichment_table$genelist,enrichment_table$GO.ID))
-mygraph=graph_from_data_frame(mymat)
-# gr = setNames(enrichment_table$Gr,enrichment_table$GO.ID)[V(mygraph)$name]
-verttype=rep('GO.ID',length(V(mygraph)))
-verttype[grep('ENSG',names(V(mygraph)))]='Gene'
-verttype = setNames(verttype,names(V(mygraph)))
-verttype=as.factor(verttype)
-vertsize=setNames(rep(0.5,length(V(mygraph))),names(V(mygraph)))
-vertsize[enrichment_table$GO.ID]=-log10(enrichment_table$p.adjusted)
-vertsize=ceiling(vertsize)
-labx=setNames(rep('',length(V(mygraph))),names(V(mygraph)))
-labx[enrichment_table$GO.ID]=substr(enrichment_table$Term,1,41)
-# verttype = factor(verttype,levels = levels(verttype)[c(3,2,5,6,4,1,7)])
-V(mygraph)$verttype = verttype
-# vertsize[verttype=='Gene'] = 0.5
-V(mygraph)$vertsize = vertsize
-# gr = gr[complete.cases(gr)]
-library(ggforce)
-# labx[verttype!='Other']=''
-# xx = sapply(unique(setdiff(verttype,c('Gene','Other'))),function(x){
-#   xx = verttype[!verttype%in%c('Gene','Other')]
-#   sample(names(xx)[xx==x],1)
-# })
-# labx[xx]=names(xx)
-# labx[labx=='']=NA
-cl3_go = ggnet2(mygraph, size = 0, edge.alpha = 0.8, edge.color = 'gray85') +
-  geom_point(aes(fill = verttype), 
-             size = vertsize,
-             shape = c(23,21)[1+(verttype=='Gene')],
-             alpha = c(0.8,0.8)[1+(verttype=='Gene')]) +
-  # geom_text(label=labx,size= 6/pntnorm,hjust=0,nudge_x = 0.01) +
-  scale_fill_brewer(type = 'qual',palette = 6)+
-  guides(fill=guide_legend('',override.aes = list(shape=21,size=2)))+
-  theme_void() +
-  theme(legend.position = 'bottom')
-# system('mkdir ./results/functionalAnalysis')
-ggsave('./results/functionalAnalysis/cl3_h1_go.pdf',cl3_go, units = 'cm', width = 8,height = 8, useDingbats = F)
-ggsave('./results/functionalAnalysis/cl3_h1_go.png',cl3_go, units = 'cm', width = 8,height = 8)
+GOres2 %>%
+  left_join(newdf)%>%
+  write_csv('./results/functionalAnalysis/gores_all.csv')
