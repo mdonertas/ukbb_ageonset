@@ -34,7 +34,7 @@ signifGenes <- signifGenes %>%
 rm(proxyGenes,eqtlGenes)
 
 ageonsetsum = signifGenes %>%
-  # filter(ageonset!='4') %>%
+  filter(ageonset!='4') %>%
   group_by(geneid) %>%
   summarise(ageonsetclusters = paste(sort(unique(ageonset)),collapse = '-',sep='-'),
             numagecluster = length(unique(ageonset))) %>%
@@ -71,12 +71,21 @@ genegrs = genedat %>%
 # genegrs = genegrs 
 
 genegrs[1,]$genelist = list(unique(unlist(c(genegrs[1,]$genelist,genegrs[2,]$genelist))))
-genegrs[3,]$genelist = list(unique(unlist(c(genegrs[3,]$genelist,genegrs[4,]$genelist))))
-genegrs[7,]$genelist = list(unique(unlist(c(genegrs[7,]$genelist,genegrs[8,]$genelist))))
-genegrs[9,]$genelist = list(unique(unlist(c(genegrs[9,]$genelist,genegrs[10,]$genelist))))
-genegrs[11,]$genelist = list(unique(unlist(c(genegrs[11,]$genelist,genegrs[12,]$genelist))))
+genegrs[1,]$numgenes = genegrs[1,]$numgenes + genegrs[2,]$numgenes
 
-saveRDS(genegrs,file='./data/processed/clustergenes.rds')
+genegrs[3,]$genelist = list(unique(unlist(c(genegrs[3,]$genelist,genegrs[4,]$genelist))))
+genegrs[3,]$numgenes = genegrs[3,]$numgenes + genegrs[4,]$numgenes
+
+genegrs[7,]$genelist = list(unique(unlist(c(genegrs[7,]$genelist,genegrs[8,]$genelist))))
+genegrs[7,]$numgenes = genegrs[7,]$numgenes + genegrs[8,]$numgenes
+
+genegrs[9,]$genelist = list(unique(unlist(c(genegrs[9,]$genelist,genegrs[10,]$genelist))))
+genegrs[9,]$numgenes = genegrs[9,]$numgenes + genegrs[10,]$numgenes
+
+genegrs[11,]$genelist = list(unique(unlist(c(genegrs[11,]$genelist,genegrs[12,]$genelist))))
+genegrs[11,]$numgenes = genegrs[11,]$numgenes + genegrs[12,]$numgenes
+
+saveRDS(genegrs,file='./data/processed/clustergenes_hgnc.rds')
 ####
 
 # genagehuman = read_csv('../melike/projects/shared_data/GenAge/20190813/data/raw/genage_human.csv')
@@ -178,7 +187,7 @@ xx = reshape2::melt(permres) %>%
   left_join(rename(select(ungroup(genegrs),name,numgenes),L1=name))
 library(ggthemes)
 
-agingdb = setNames(c('GenAge-Human','GenAge-Model','DrugAge','CellAge','all'),c('human','model organism','drug','senescence','all-combined'))
+agingdb = setNames(c('GenAge-Human','GenAge-Model','DrugAge','CellAge','All Combined'),c('human','model organism','drug','senescence','all-combined'))
 xx = xx %>% 
   mutate(cluster=gsub('cl','',cluster),
          type = c('Multidisease','Multicategory')[as.numeric(as.factor(type))]) %>%
@@ -188,8 +197,8 @@ xx = xx %>%
   mutate(prop = ifelse(prop==-Inf,NA,prop))
 oddsplot = ggplot(xx, aes(x=cluster, y = prop, color = Aging, size = p<=0.05)) +
   geom_hline(yintercept = 0, color = 'darkred',linetype = 'dashed', size = 0.2, alpha = 0.5) +
-  geom_text(aes(label=paste(numgenes,'genes')), y = -1.6, color = 'gray25', size = 6/pntnorm,hjust=0,nudge_x = 0.4) +
-  geom_point(alpha=0.3,aes(shape=p<0.05)) + 
+  geom_text(data=dplyr::select(xx,cluster,numgenes,type),aes(label=paste(numgenes,'genes')), y = -1.6, color = 'gray25', size = 6/pntnorm,hjust=0,nudge_x = 0.4) +
+  geom_point(alpha=0.7,aes(shape=p<0.05)) + 
   geom_text_repel(data = filter(xx,p<=0.05),aes(label = paste('(',num,')',sep='')), size = 6/pntnorm, box.padding = 0.25,min.segment.length = 0.25) +
   scale_size_manual(values=setNames(c(0.5,2),c(F,T))) +
   scale_shape_manual(values=setNames(c(4,19),c(F,T))) +
@@ -212,7 +221,7 @@ lapply(genegr,function(x){
   })
   names(xx) = c('human','model organism','drug','senescence','all-combined')
   xx
-})
-ggsave('./results/agingRelevance/genage2.pdf',oddsx,units ='cm',width = 15,height = 20,useDingbats=F)
-ggsave('./results/agingRelevance/genage2.png',oddsx,units ='cm',width = 15,height = 20)
-
+}) %>%
+  reshape2::melt() %>%
+  write_csv('./results/agingRelevance/genageoverlaps.csv')
+beepr::beep()
