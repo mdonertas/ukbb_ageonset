@@ -47,7 +47,15 @@ odds[p>0.01] = 1
 l2odds = log2(odds)
 i = which(rowMeans(l2odds==0, na.rm =T) != 1)
 l2odds = l2odds[i,i]
+# disannot = data.frame(diseaseCategories = unname(disTreecl[numSignif$disease]),
+                      # ageonset_clusters = as.character(unname(readRDS('./data/processed/ageonset/clusters_pam_Tibs2001SEmax.rds')$clustering[numSignif$disease])))
+# rownames(disannot) = numSignif$disease
+# disannot = disannot %>%
+  # mutate(disease = rownames(disannot))
+# annotcolors = list(diseaseCategories = discatcolors,ageonset_clusters = ageonsetcolors)
+
 rownames(disannot) = disannot$disease
+
 pheatmap::pheatmap(l2odds, color = colorRampPalette(brewer.pal(8,'Reds'))(20),cellwidth = 5, cellheight = 5, cutree_rows = 10, cutree_cols = 10, annotation_row = disannot[,-3], annotation_col = disannot[,-3], annotation_colors = annotcolors, fontsize = 6, filename = './results/genomicAnalysis/signifSNPoverlap_heatmap_ldblock.pdf')
 
 pheatmap::pheatmap(l2odds, color = colorRampPalette(brewer.pal(8,'Reds'))(20),cellwidth = 5, cellheight = 5, cutree_rows = 10, cutree_cols = 10, annotation_row = disannot[,-3], annotation_col = disannot[,-3], annotation_colors = annotcolors, fontsize = 6, filename = './results/genomicAnalysis/signifSNPoverlap_heatmap_ldblock.png')
@@ -105,7 +113,8 @@ mynet = graph_from_data_frame(select(xx,disease1,disease2,val) %>%na.omit() %>%u
 V(mynet)$ageonset_cl = setNames(disannot$ageonset_clusters,rownames(disannot))[V(mynet)$name]
 V(mynet)$discat = as.character(setNames(disannot$diseaseCategories,rownames(disannot))[V(mynet)$name])
 E(mynet)$edgewidth = summary(E(mynet)$val/30)
-net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')
+net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')+
+  theme_void()
 
 net1 = net0 +
   geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])+
@@ -221,7 +230,8 @@ mynet = mydat %>%
 V(mynet)$ageonset_cl = ageonsetclusters$clustering[V(mynet)$name]
 V(mynet)$discat = as.character(disTreecl[V(mynet)$name])
 E(mynet)$edgewidth = summary(E(mynet)$snp_odds/30)
-net0 = ggnet2(mynet, size = 0, edge.color = 'gray80')
+net0 = ggnet2(mynet, size = 0, edge.color = 'gray80') +
+  theme_void()
 net1 = net0 +
   geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl]) +
   theme_void()
@@ -246,7 +256,8 @@ mynet = mydat %>%
 V(mynet)$ageonset_cl = ageonsetclusters$clustering[V(mynet)$name]
 V(mynet)$discat = as.character(disTreecl[V(mynet)$name])
 E(mynet)$edgewidth = summary((6+E(mynet)$corrected_val)/30)
-net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')
+net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')+
+  theme_void()
 net1 = net0 +
   geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])+
   theme_void()
