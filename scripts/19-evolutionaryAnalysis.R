@@ -120,14 +120,13 @@ library(ggthemes)
 numsnps = reshape2::melt((table(unique(select(signifSNPs,SNP,numDis,numCl))%>%select(-SNP)))) %>%
   mutate(value = ifelse(value ==0, NA, value)) %>%
   mutate(numDis = paste('# Diseases = ', numDis, sep='')) %>%
-  ggplot(aes(x = as.factor(numCl), fill = as.factor(numCl), y = value)) +
+  ggplot(aes(x = as.factor(numCl), y = value)) +
   geom_bar(stat = 'identity', position = 'dodge') +
   geom_label(aes(label = scales::comma(value)), fill = 'white', y=0.5) +
   facet_wrap(~numDis) + 
   scale_y_log10(label = scales::comma) +
   guides(fill = F) +
-  xlab('Number of Clusters') + ylab('Number of SNPs (in log10 scale)') +
-  scale_fill_wsj()
+  xlab('Number of Clusters') + ylab('Number of SNPs (in log10 scale)') 
 
 # numsnps = reshape2::melt((table(unique(select(signifSNPs,SNP,numDis,numCl))%>%select(-SNP)))) %>%
 #   ggplot(aes(x = factor(numCl,levels = 1:3), y= factor(numDis,levels = 9:1))) +
