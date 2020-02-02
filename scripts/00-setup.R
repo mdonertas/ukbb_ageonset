@@ -28,4 +28,5 @@ mhcchr=6
 mhcstart=28477797
 mhcend=33448354
 
-ageonsetcolors = setNames(rev(brewer.pal(4,'Oranges')),1:4)
+# ageonsetcolors = setNames(rev(brewer.pal(4,'Oranges')),1:4)
+ageonsetcolors=setNames(c('#D55E00','#0072B2','#F0E442','#CC79A7','#E69F00','#56B4E9','gray80',"#C6E2FF"),c('1','2','3','1-2','1-3','2-3','1-2-3','4'))
