@@ -51,8 +51,7 @@ disannot = data.frame(diseaseCategories = unname(disTreecl[numSignif$disease]),
 rownames(disannot) = numSignif$disease
 disannot = disannot %>%
   mutate(disease = rownames(disannot))
-ageonsetcolors = setNames(rev(brewer.pal(4,'Oranges')),1:4)
-annotcolors = list(diseaseCategories = discatcolors,ageonset_clusters = setNames(rev(brewer.pal(4,'Oranges')),1:4))
+annotcolors = list(diseaseCategories = discatcolors,ageonset_clusters = ageonsetcolors)
 
 numSignif_by_ageonset = numSignif %>%
   left_join(disannot) %>%
@@ -266,7 +265,9 @@ mynet = graph_from_data_frame(select(xx,disease1,disease2,val) %>%na.omit() %>%u
 V(mynet)$ageonset_cl = setNames(disannot$ageonset_clusters,rownames(disannot))[V(mynet)$name]
 V(mynet)$discat = as.character(setNames(disannot$diseaseCategories,rownames(disannot))[V(mynet)$name])
 E(mynet)$edgewidth = summary(E(mynet)$val/30)
-net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')
+library(GGally)
+net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')+
+  theme_void()
 
 net1 = net0 +
   geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])
