@@ -133,17 +133,18 @@ mynet = mydat %>%
 V(mynet)$ageonset_cl = ageonsetclusters$clustering[V(mynet)$name]
 V(mynet)$discat = as.character(disTreecl[V(mynet)$name])
 E(mynet)$edgewidth = summary(E(mynet)$snp_odds/30)
-net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')
+net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')+
+  theme_void()
 net1 = net0 +
   geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])
 net2 = net0 +
   geom_point(size = 2, color = discatcolors[V(mynet)$discat])
 
-ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.pdf', net1, units = 'cm', width = 18, height = 8, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.png', net1, units = 'cm', width = 18, height = 8)
+ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.pdf', net1, units = 'cm', width = 16, height = 8, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.png', net1, units = 'cm', width = 16, height = 8)
 
-ggsave('./results/genomicAnalysis/SNPnet_discat.pdf', net2, units = 'cm', width = 18, height = 8, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPnet_discat.png', net2, units = 'cm', width = 18, height = 8)
+ggsave('./results/genomicAnalysis/SNPnet_discat.pdf', net2, units = 'cm', width = 16, height = 8, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPnet_discat.png', net2, units = 'cm', width = 16, height = 8)
 
 mynet = mydat %>%
   mutate(sameCat = factor(c('different category','same category')[1+sameCat]),
@@ -156,17 +157,18 @@ mynet = mydat %>%
 V(mynet)$ageonset_cl = ageonsetclusters$clustering[V(mynet)$name]
 V(mynet)$discat = as.character(disTreecl[V(mynet)$name])
 E(mynet)$edgewidth = summary((6+E(mynet)$corrected_val)/30)
-net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')
+net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')+
+  theme_void()
 net1 = net0 +
   geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])
 net2 = net0 +
   geom_point(size = 2, color = discatcolors[V(mynet)$discat])
 
-ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.pdf', net1, units = 'cm', width = 18, height = 8, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.png', net1, units = 'cm', width = 18, height = 8)
+ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.pdf', net1, units = 'cm', width = 16, height = 8, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.png', net1, units = 'cm', width = 16, height = 8)
 
-ggsave('./results/genomicAnalysis/SNPnet_discat.pdf_corr', net2, units = 'cm', width = 18, height = 8, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPnet_discat.png_corr', net2, units = 'cm', width = 18, height = 8)
+ggsave('./results/genomicAnalysis/SNPnet_discat.pdf_corr', net2, units = 'cm', width = 16, height = 8, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPnet_discat.png_corr', net2, units = 'cm', width = 16, height = 8)
 
 
 lmmod = lm(snp_odds ~ sameCat + cooccur + sameAge, data=mydat) 
@@ -199,12 +201,12 @@ correctedp = mydat %>%
 
 
 snpp = ggarrange(rawp,correctedp,labels='auto')
-ggsave('./results/genomicAnalysis/SNPsimilarity_bysameAge.pdf',snpp, units = 'cm', width = 18, height = 7, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPsimilarity_bysameAge.png',snpp, units = 'cm', width = 18, height = 7)
+ggsave('./results/genomicAnalysis/SNPsimilarity_bysameAge.pdf',snpp, units = 'cm', width = 16, height = 7, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPsimilarity_bysameAge.png',snpp, units = 'cm', width = 16, height = 7)
 
 netandbox = ggarrange(net1,correctedp,labels='auto')
-ggsave('./results/genomicAnalysis/SNPsimilarity_age_netbox.pdf',netandbox, units = 'cm', width = 18, height = 7, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPsimilarity_age_netbox.png',netandbox, units = 'cm', width = 18, height = 7)
+ggsave('./results/genomicAnalysis/SNPsimilarity_age_netbox.pdf',netandbox, units = 'cm', width = 16, height = 7, useDingbats = F)
+ggsave('./results/genomicAnalysis/SNPsimilarity_age_netbox.png',netandbox, units = 'cm', width = 16, height = 7)
 
 mydat = alldat %>%
   mutate(snp_odds = log2(snp_odds),
@@ -227,7 +229,7 @@ rawp1 = mydat %>%
   ggplot(aes(x = disB_ageonset, y= snp_odds)) +
   geom_boxplot(outlier.shape = NA) +
   # geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_jitter(size = 0.5, color = 'gray40') +
+  geom_jitter(size = 0.5) +
   ylab('Genetic Similarity (on log2)') + xlab('') + scale_x_discrete(drop=F,breaks=factor(1:4)) +
   ggtitle('Similarity between age-of-onset cluster 1\nand other clusters (with raw values)') 
 
@@ -237,7 +239,7 @@ correctedp1 = mydat %>%
   ggplot(aes(x = disB_ageonset, y= corrected_val)) +
   geom_boxplot(outlier.shape = NA) +
   # geom_violin(draw_quantiles = c(0.25,0.5,0.75), size = 1) +
-  geom_jitter( size = 0.5, color = 'gray40') +
+  geom_jitter( size = 0.5) +
   ylab('Genetic Similarity (on log2)') + xlab('') + scale_x_discrete(drop=F,breaks=factor(1:4)) +
   ggtitle('Similarity between age-of-onset cluster 1 and others\nwith corrected values (by category and co-occurrence)') 
 
