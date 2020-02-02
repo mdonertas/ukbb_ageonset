@@ -1,111 +1,50 @@
 source('./scripts/00-setup.R')
 disIDs = gsub('a','',list.files('./results/caseControl/'))
 disCoding <- setNames(disCoding$meaning,disCoding$node_id)
+genegrs <- readRDS('./data/processed/clustergenes_hgnc.rds')
+genegr <- setNames(genegrs$genelist,genegrs$name)
+eqtlgenes = readRDS('./data/processed/caseControl/a1071/gwasRes_eQTLGenes.rds')
+eqtlgenes = setdiff(unique(eqtlgenes$eQTL_hgnc),NA)
+proxygenes = readRDS('./data/processed/caseControl/a1071/gwasRes_proxyGenes.rds')
+proxygenes = setdiff(unique(proxygenes$proxy_hgnc),NA)
 
-proxyGenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_proxyGenes.rds',sep=''),function(x){
-  x=readRDS(x)
-  x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
-  setdiff(unique(x$proxy_hgnc),c('',NA))
-})
-names(proxyGenes)=disIDs
-
-eqtlGenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_eQTLGenes.rds',sep=''),function(x){
-  x=readRDS(x)
-  x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
-  setdiff(unique(x$eQTL_hgnc),c('',NA))
-})
-names(eqtlGenes)=disIDs
-
-proxyGenes <- reshape2::melt(proxyGenes) %>%
-  set_names(c('geneid','disID')) %>%
-  mutate(proxy = TRUE)
-
-eqtlGenes <- reshape2::melt(eqtlGenes) %>%
-  set_names(c('geneid','disID')) %>%
-  mutate(eqtl = TRUE)
-
-signifGenes <- full_join(proxyGenes, eqtlGenes) 
-
-signifGenes <- signifGenes %>%
-  mutate(disease = disCoding[as.character(disID)]) %>%
-  mutate(disCat = disTreecl[disease],
-         ageonset = (readRDS('./data/processed/ageonset/clusters_pam_Tibs2001SEmax.rds')$cluster)[disease]) 
-
-rm(proxyGenes,eqtlGenes)
-
-ageonsetsum = signifGenes %>%
-  group_by(geneid) %>%
-  summarise(ageonsetclusters = paste(sort(unique(ageonset)),collapse = '-',sep='-'),
-            numagecluster = length(unique(ageonset))) %>%
-  ungroup()
-
-discatsum = signifGenes %>%
-  group_by(geneid) %>%
-  summarise(discategories = paste(sort(unique(disCat)),collapse = ', ',sep=', '),
-            numdiscat = length(unique(disCat))) %>%
-  ungroup()
-
-dissum = signifGenes %>%
-  group_by(geneid) %>%
-  summarise(all_diseases = paste(sort(unique(disease)),collapse = ', ',sep=', '),
-            numdiseases = length(unique(disease))) %>%
-  ungroup()
-
-genedat = full_join(dissum,full_join(ageonsetsum,discatsum)) %>%
-  select(geneid, numdiseases,numdiscat,numagecluster,ageonsetclusters, everything()) 
-
-rm(ageonsetsum,discatsum,dissum)
-
-cl1genes= (genedat %>%
-             filter(ageonsetclusters == '1') %>%
-             filter(numdiscat > 0))$geneid
-
-cl2genes = (genedat %>%
-              filter(ageonsetclusters == '2') %>%
-              filter(numdiscat > 0))$geneid
-
-cl3genes= (genedat %>%
-             filter(ageonsetclusters == '3') %>%
-             filter(numdiscat > 0))$geneid
-
-cl1genes_h1cat = (genedat %>%
-                    filter(ageonsetclusters == '1') %>%
-                    filter(numdiscat > 1))$geneid
-
-cl2genes_h1cat = (genedat %>%
-                    filter(ageonsetclusters == '2') %>%
-                    filter(numdiscat > 1))$geneid
-
-cl3genes_h1cat = (genedat %>%
-                    filter(ageonsetclusters == '3') %>%
-                    filter(numdiscat > 1))$geneid
-
+allgenes = unique(c(eqtlgenes,proxygenes))
+rm(eqtlgenes,proxygenes)
 ####
 
 interactions <- read_tsv("http://www.dgidb.org/data/interactions.tsv") %>% 
   rename(ChEMBLID = drug_chembl_id) %>% dplyr::select(gene_name, 
                                                       ChEMBLID) %>% unique() %>% na.omit()
-
 drug_target_list = lapply(unique(interactions$ChEMBLID),function(drug){
   unique(filter(interactions,ChEMBLID==drug)$gene_name)
 })
+length(drug_target_list)
+#6277
 names(drug_target_list)=unique(interactions$ChEMBLID)
-genesx = intersect(genedat$geneid,interactions$gene_name)
-
-cl1drugs = as.data.frame(t(sapply(drug_target_list,function(drugx){
-  a = length(unique(intersect(drugx,cl1genes_h1cat)))
-  b = length(unique(intersect(drugx,genesx))) - a
-  c = length(unique(intersect(cl1genes_h1cat,genesx))) - a
-  d = length(unique(genesx)) - a - b - c
-  mydat=c(a,b,c,d)
-  fi = fisher.test(matrix(mydat,nrow=2,byrow = F))
-  c(mydat,fi$p.value,fi$estimate)
-}))) %>%
-  set_names(c('a','b','c','d','p','odds')) %>%
-  mutate(padj = p.adjust(p,method ='fdr')) %>%
-  mutate(ChEMBLID = names(drug_target_list))
-
-drugage = read_csv('../melike/projects/shared_data/GenAge/20190813/data/raw/drugage.csv')
+genesx = unique(intersect(allgenes,interactions$gene_name))
+length(genesx)
+# 2385
+genegr$cl12combined_all=unique(c(genegr$cl1_all,genegr$`cl1-2_all`,genegr$cl2_all))
+genegr$cl12combined_multicat =unique(c(genegr$cl1_multicat,genegr$`cl1-2_multicat`,genegr$cl2_multicat))
+drugres = lapply(drug_target_list,function(drugx){
+  xx = as.data.frame(t(sapply(genegr[13:14],function(geneset){
+    a = unique(intersect(intersect(drugx,geneset),genesx))
+    b = unique(intersect(setdiff(drugx,geneset),genesx))
+    c = unique(intersect(setdiff(geneset,drugx),genesx))
+    d = unique(setdiff(genesx,unique(c(a,b,c))))
+    mydat=c(length(a),length(b),length(c),length(d))
+    fi = fisher.test(matrix(mydat,nrow=2,byrow = T))
+    c(mydat,fi$p.value,fi$estimate)
+  }))) %>%
+    set_names(c('a','b','c','d','p','odds')) %>%
+    mutate(name = names(genegr)[13:14])
+  xx
+})
+drugres = reshape2::melt(drugres,id.vars = colnames(drugres[[1]])) %>%
+  rename(ChEMBLID =L1)
+# drugres$ChEMBLID = rownames(drugres)
+# drugage = read_csv('../melike/projects/shared_data/GenAge/20190813/data/raw/drugage.csv')
+drugage = read_csv('./data/raw/drugage.csv')
 DA_drugs_incSyn <- unique(drugage$compound_name)
 name2CID <- function(nm) {
   library(RCurl)
@@ -127,16 +66,29 @@ convertIDs <- function(drugList) {
 DA_drugs_incSyn_CIDs <- convertIDs(DA_drugs_incSyn)
 DA_drugs_incSyn_CIDlist <- DA_drugs_incSyn_CIDs[[1]]
 cid2chembl <- function(intab, out_fx) {
-  pubchem2chembl <- read_tsv("../melike/projects/shared_data/UniChem/20190813/data/raw/src1src22.txt") %>%
+  # pubchem2chembl <- read_tsv("../melike/projects/shared_data/UniChem/20190813/data/raw/src1src22.txt") %>%
+  pubchem2chembl <- read_tsv("./data/raw/src1src22.txt") %>%
     setNames(., c("ChEMBLID", "CID")) %>% mutate(CID = as.character(CID))
   fintable <- intab %>% mutate(CID = as.character(CID)) %>%
     left_join(pubchem2chembl) %>% unique()
   return(fintable)
 }
 DA_drugs_incSyn_CHEMBLlist <- cid2chembl(DA_drugs_incSyn_CIDlist)
-unique(filter(cl1drugs,p<=0.1)$ChEMBLID)
+drugres = drugres %>%
+separate(name, remove = F, sep='_',into = c('cluster','type')) %>%
+# mutate(cluster = factor(gsub('cl','',cluster),levels=c('1','2','3','1-2','1-3','2-3','1-2-3'))) %>%
+mutate(type = factor(c('Multidisease','Multicategory')[as.numeric(as.factor(type))],
+levels = c('Multidisease','Multicategory')))
+
+drugxx = drugres %>%
+  filter(a+b <=10) %>%
+  filter(type == 'Multicategory') %>%
+  # mutate(padj = p.adjust(p, method='fdr')) %>%
+  # filter(padj<=0.1)
+  filter(p<=0.01 | odds == Inf)
+
 DA_drugs_incSyn_CHEMBLlist %>%
-  filter(ChEMBLID %in% unique(filter(cl1drugs,p<=0.1)$ChEMBLID))
+  filter(ChEMBLID %in% drugxx$ChEMBLID)
 chembl2name <- function(nm){
   library(RCurl)
   library(jsonlite)
@@ -147,46 +99,59 @@ chembl2name <- function(nm){
   else{dat <- fromJSON(dat)
   return(unique(toupper(dat$pref_name)))}
 }
-chemid = unique(filter(cl1drugs,p<=0.1)$ChEMBLID)
+chemid = drugxx$ChEMBLID
 chemname = sapply(chemid,chembl2name)
-chemname = reshape2::melt(chemname) %>% set_names(c('Name','ChEMBLID')) 
+chemname = reshape2::melt(chemname) %>% set_names(c('Name','ChEMBLID'))
+# chemname = data.frame(Name = unname(chemname), ChEMBLID=names(chemname))
+drugxx = drugxx %>%
+  left_join(chemname) %>%
+  mutate(Name = as.character(Name),
+         ChEMBLID = as.character(ChEMBLID))
+drugxx$Name[which(is.na(drugxx$Name))]=drugxx$ChEMBLID[which(is.na(drugxx$Name))]
+
+
 chemtargets  = interactions %>%
   filter(ChEMBLID %in% chemid) %>%
   group_by(ChEMBLID) %>%
-  summarise(genes = paste(sort(unique(gene_name)),collapse = ', '),
-            cl1genes = paste(sort(unique(intersect(gene_name,cl1genes_h1cat))),collapse = ', '))
-
-filter(cl1drugs,p<=0.1) %>%
-  left_join(chemname) %>%
-  left_join(chemtargets) %>%
-  arrange(-odds,-a) %>%
-  select(Name, cl1genes, odds, genes, ChEMBLID, odds, everything()) %>% View()
+  summarise(genes = paste(sort(unique(gene_name)),collapse = ', '))
 
 indat  = interactions %>% 
-  filter(ChEMBLID%in%chemid & gene_name %in% genedat$geneid) %>%
-  left_join(chemname) %>% select(-ChEMBLID) %>% unique()
-myg = graph_from_data_frame(indat)
+  filter(ChEMBLID%in%chemid & gene_name %in% allgenes) %>%
+  left_join(chemname) %>% unique() %>%
+  mutate(Name = as.character(Name),
+         ChEMBLID = as.character(ChEMBLID))
+indat$Name[which(is.na(indat$Name))]=indat$ChEMBLID[which(is.na(indat$Name))]
+
+indat %>%
+  group_by(Name,ChEMBLID) %>%
+  summarise(genes_in_multicatCl1 = paste(sort(unique(intersect(gene_name,genegr$cl1_multicat))),collapse=', '),
+            genes_in_multicatCl2 = paste(sort(unique(intersect(gene_name,genegr$cl2_multicat))),collapse=', '),
+            genes_in_multicatCl12 = paste(sort(unique(intersect(gene_name,genegr$`cl1-2_multicat`))),collapse=', '),
+            otherGenes = paste(sort(unique(setdiff(gene_name,unique(c(genegr$cl1_multicat,genegr$cl2_multicat,genegr$`cl1-2_multicat`))))),collapse=', ')) %>%
+  write_csv('results/drug/signifDrugs_multicat12combined_p001_oddsInf.csv')
+
+myg = indat %>%
+  mutate(Name = ifelse(grepl('insulin',Name,ignore.case = T),'Insulin',Name))%>%
+  select(-ChEMBLID) %>% unique( )%>%
+  graph_from_data_frame()
+# myg = graph_from_data_frame(indat)
 V(myg)$type = 'drug'
 V(myg)$type[V(myg)$name %in% interactions$gene_name] = 'gene'
-V(myg)$cl = '-'
-V(myg)$cl[V(myg)$name %in% cl1genes_h1cat ] = 'cl1'
 V(myg)$color=V(myg)$type
-V(myg)$color[V(myg)$name %in% cl1genes_h1cat] = 'cl1'
+V(myg)$color[V(myg)$name %in% genegr$cl1_multicat] = 'cl1'
+V(myg)$color[V(myg)$name %in% genegr$`cl1-2_multicat`] = 'cl1-2'
 labx= V(myg)$name
-labx[!labx%in%genedat$geneid]=tolower(labx[!labx%in%genedat$geneid])
+# labx[V(myg)$type=='drug']=''
+labx[!labx%in%allgenes]=tolower(labx[!labx%in%allgenes])
 library(GGally)
 drugnet = ggnet2(myg,size=0,edge.color='gray70')+
   geom_point(shape = c(18,19)[factor(V(myg)$type)], 
              size = c(3,2)[factor(V(myg)$type)],
-             color = c('firebrick2','dodgerblue','azure3')[factor(V(myg)$color)]) +
+             color = setNames(c(ageonsetcolors[c('1','1-2')],'gray70','midnightblue'),c('cl1','cl1-2','gene','drug'))[V(myg)$color]) +
   geom_text_repel(label=labx,box.padding = 0.01,size=6/pntnorm,
-                  color = c('gray5','midnightblue','gray70')[factor(V(myg)$color)])
+                  color = c('gray5','gray5','midnightblue','gray70')[factor(V(myg)$color)]) +
+  theme_void()
 
-ggsave('./results/drugnet.pdf', drugnet,width = 16.7,height = 12,units = 'cm',useDingbats=F)
-ggsave('./results/drugnet.png', drugnet,width = 16.7,height = 12,units = 'cm')
+ggsave('./results/drug/drugnet.pdf', drugnet,width = 16,height = 12,units = 'cm',useDingbats=F)
+ggsave('./results/drug/drugnet.png', drugnet,width = 16,height = 12,units = 'cm')
 
-filter(cl1drugs,odds>0,a>0) %>%
-  left_join(chemname) %>%
-  left_join(chemtargets) %>%
-  arrange(-odds,-a) %>%
-  select(Name, cl1genes, odds, genes, ChEMBLID, odds, everything()) %>% select(cl1genes) %>% unique()
