@@ -19,11 +19,11 @@ signifSNPs = sapply(signifSNPs,function(x){
     nrow()
 })
 traitids = names(which(signifSNPs >= 10))
-
+n=0
 for (i in 1:(length(traitids) - 1)) {
   for (k in (i + 1):length(traitids)) {
-    system(paste('bsub -o ./errorfiles/errorfile.',traitids[i],'_',traitids[k],'.txt -M 16000 -R "rusage[mem=16000]" RScript ./scripts/25.1-runLCV.R ',traitids[i],' ',traitids[k],sep=''))
+    system(paste('bsub -o ./errorfiles/errorfile.',traitids[i],'_',traitids[k],'.txt -M 8000 -R "rusage[mem=4000]" Rscript ./scripts/25.1-runLCV.R ',traitids[i],' ',traitids[k],sep=''))
+    n=n+1
   }
 }
-
-
+print(n)
