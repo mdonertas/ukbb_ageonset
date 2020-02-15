@@ -134,19 +134,20 @@ fi31=fisher.test(matrix(c(0,resx[3,1],7,sum(resx[1,c(2,3)])),ncol=2))
 fi32=fisher.test(matrix(c(7,resx[3,2],0,sum(resx[1,c(1,3)])),ncol=2))
 fi33=fisher.test(matrix(c(0,resx[3,3],7,sum(resx[1,c(1,2)])),ncol=2))
 
+clstats$possible = c(resx[1,1],resx[1,2],resx[1,3],resx[2,1],resx[2,2],resx[2,3],resx[3,2])
 clstats %>%
   mutate(perc = n/possible) %>%
   ggplot(aes(x = as.factor(cluster1), y = perc, fill = as.factor(cluster2))) +
   geom_bar(stat='identity',position=position_dodge2(preserve = "single",padding = 0.05)) +
   scale_fill_manual(values = ageonsetcolors) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), limits = c(0,0.015)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), limits = c(0,0.055)) +
   xlab('Disease 1 (Age-of-onset Cluster)') + 
   guides(fill = guide_legend('Disease 2\nAge-of-onset Cluster', title.hjust = 1, title.vjust = 0.5 )) +
   ylab(NULL) + ggtitle('Percent Causal Relationship\nDisease 1 -> Disease2') +
   theme_pubr(base_size = 6, legend = 'bottom') +
   theme(legend.key.size = unit(2,'mm')) +
-  annotate('text',x=2.3,label='**', y= 0.0058, size = 6/pntnorm) +
-  annotate('text',x=3,label='**', y= 0.0051, size = 6/pntnorm)
+  annotate('text',x=2.3,label='**', y= 0.025, size = 6/pntnorm) +
+  annotate('text',x=3,label='**', y= 0.022, size = 6/pntnorm)
 ggsave('./results/LCV/clustersummary.pdf',units = 'cm',width = 5,height = 5, useDingbats = F)
 ggsave('./results/LCV/clustersummary.png',units = 'cm',width = 5,height = 5)
 
