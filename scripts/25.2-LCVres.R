@@ -59,6 +59,20 @@ lcv2 = lcv %>%
   filter(heritability1>=7 & heritability2>=7) %>%
   mutate(padj = p.adjust(pval_2tailed, method = 'fdr'))
 
+lcv2 %>%
+  filter(padj<=0.01 & gcp>0.6) %>%
+  select(disease1, disease2, padj, rho_est, rho_err, gcp, gcp_se) %>%
+  arrange(-gcp) %>%
+  setNames(c('Disease 1','Disease 2', 'FDR corrected p-value','Genetic Correlation (rho)','Standard Error of rho','Mean Genetic Causality Proportion (GCP)','Standard Error of GCP')) %>%
+  write_tsv('./results/LCV/significantRes.tsv')
+
+lcv2 %>%
+  filter(padj<=0.01 & gcp>0.6) %>%
+  select(disease1, disease2, padj, rho_est, rho_err, gcp, gcp_se) %>%
+  arrange(-gcp) %>%
+  setNames(c('Disease 1','Disease 2', 'FDR corrected p-value','Genetic Correlation (rho)','Standard Error of rho','Mean Genetic Causality Proportion (GCP)','Standard Error of GCP')) %>% 
+  write_csv('./results/LCV/significantRes.csv')
+
 n = lcv2 %>%
   filter(padj<=0.01 & gcp>0.6) %>%
   select(disease1, disease2, everything() ) %>%
@@ -82,6 +96,17 @@ ggplot(n) +
   scale_size_continuous(range=c(1,4))
 ggsave('./results/LCV/network.pdf',units = 'cm',width = 16,height = 14,useDingbats = F)
 ggsave('./results/LCV/network.png',units = 'cm',width = 16,height = 14)
+
+
+
+unique(c(unique(disTreecl[unique(neighbors(n,names(sort(igraph::degree(n,mode = 'out'),dec = T)[1]),mode = 'out')$name)]),
+unique(disTreecl[unique(neighbors(n,names(sort(igraph::degree(n,mode = 'out'),dec = T)[2]),mode = 'out')$name)]),
+unique(disTreecl[unique(neighbors(n,names(sort(igraph::degree(n,mode = 'out'),dec = T)[3]),mode = 'out')$name)])))
+
+unique(c(unique(disTreecl[unique(neighbors(n,names(sort(igraph::degree(n,mode = 'in'),dec = T)[1]),mode = 'in')$name)]),
+  unique(disTreecl[unique(neighbors(n,names(sort(igraph::degree(n,mode = 'in'),dec = T)[2]),mode = 'in')$name)])))
+
+
 
 lcv2 %>% 
   filter(padj<=0.01 & gcp>0.6) %>%
@@ -123,18 +148,33 @@ resx = sapply(1:3,function(i){
       nrow()
   })
 })
-
-fi11=fisher.test(matrix(c(5,resx[1,1],17+9,sum(resx[1,2:3])),ncol=2))
-fi12=fisher.test(matrix(c(17,resx[1,2],5+9,sum(resx[1,c(1,3)])),ncol=2))
-fi13=fisher.test(matrix(c(9,resx[1,3],5+17,sum(resx[1,1:2])),ncol=2))
-fi21=fisher.test(matrix(c(15,resx[2,1],38,sum(resx[1,2:3])),ncol=2))
-fi22=fisher.test(matrix(c(30,resx[2,2],15+8,sum(resx[1,c(1,3)])),ncol=2))
-fi23=fisher.test(matrix(c(8,resx[2,3],15+30,sum(resx[1,1:2])),ncol=2))
-fi31=fisher.test(matrix(c(0,resx[3,1],7,sum(resx[1,c(2,3)])),ncol=2))
-fi32=fisher.test(matrix(c(7,resx[3,2],0,sum(resx[1,c(1,3)])),ncol=2))
-fi33=fisher.test(matrix(c(0,resx[3,3],7,sum(resx[1,c(1,2)])),ncol=2))
-
 clstats$possible = c(resx[1,1],resx[1,2],resx[1,3],resx[2,1],resx[2,2],resx[2,3],resx[3,2])
+clstats = rbind(ungroup(clstats),data.frame(cluster1=c(3,3),cluster2=c(1,3),n=c(0,0),possible=c(resx[3,1],resx[3,3]))) %>%
+  arrange(cluster1,cluster2)
+
+fitest = lapply(1:3,function(i){
+  lapply(1:3,function(j){
+    a = filter(clstats, cluster1 == i & cluster2 ==j)$n
+    b = filter(clstats, cluster1 == i & cluster2 ==j)$possible
+    lapply(1:3,function(k){
+      c = filter(clstats, cluster1 == i & cluster2 == k)$n
+      d = filter(clstats, cluster1 == i & cluster2 == k)$possible
+      fi = fisher.test(matrix(c(a,b,c,d),ncol=2,byrow=T))
+      data.frame(test = paste(i,j,'_',i,k,sep=''),
+                 a=a,b=b,c=c,d=d,odds = unname(fi$est),
+                 p = unname(fi$p.val))
+    })
+  })
+})
+
+fitest = reshape2::melt(fitest) %>%
+  spread(variable,value) %>%
+  select(-L3,-L2,-L1)
+
+fitest = fitest[-c(1,4,5,7,8,9,10,13,14,16,17,18,19,22,23,25,26,27),]
+
+fitest$adj = p.adjust(fitest$p,method='fdr')
+
 clstats %>%
   mutate(perc = n/possible) %>%
   ggplot(aes(x = as.factor(cluster1), y = perc, fill = as.factor(cluster2))) +
@@ -145,9 +185,7 @@ clstats %>%
   guides(fill = guide_legend('Disease 2\nAge-of-onset Cluster', title.hjust = 1, title.vjust = 0.5 )) +
   ylab(NULL) + ggtitle('Percent Causal Relationship\nDisease 1 -> Disease2') +
   theme_pubr(base_size = 6, legend = 'bottom') +
-  theme(legend.key.size = unit(2,'mm')) +
-  annotate('text',x=2.3,label='**', y= 0.025, size = 6/pntnorm) +
-  annotate('text',x=3,label='**', y= 0.022, size = 6/pntnorm)
+  theme(legend.key.size = unit(2,'mm')) 
 ggsave('./results/LCV/clustersummary.pdf',units = 'cm',width = 5,height = 5, useDingbats = F)
 ggsave('./results/LCV/clustersummary.png',units = 'cm',width = 5,height = 5)
 
