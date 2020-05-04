@@ -86,6 +86,9 @@ genegrs[11,]$genelist = list(unique(unlist(c(genegrs[11,]$genelist,genegrs[12,]$
 genegrs[11,]$numgenes = genegrs[11,]$numgenes + genegrs[12,]$numgenes
 
 saveRDS(genegrs,file='./data/processed/clustergenes_hgnc.rds')
+genegrs = readRDS('./data/processed/clustergenes_hgnc.rds')
+# genegrs = rbind(genegrs,genegrs[c(5,6),])
+
 ####
 
 # genagehuman = read_csv('../melike/projects/shared_data/GenAge/20190813/data/raw/genage_human.csv')
@@ -195,22 +198,42 @@ xx = xx %>%
   mutate(cluster = factor(cluster, levels = c('1','2','3','1-2','1-3','2-3','1-2-3'))) %>%
   mutate(type = factor(type,levels = c('Multidisease','Multicategory'))) %>%
   mutate(prop = ifelse(prop==-Inf,NA,prop))
+# xx %>% 
+#   # filter(type == 'Multidisease') %>%
+#   filter(cluster %in% c(1,2,3)) %>%
+#   ggplot(aes(x=Aging, y = prop, fill = p<=0.05)) + 
+#   facet_grid(type~cluster) +
+#   geom_bar(stat='identity') +
+#   coord_flip() +
+#   geom_hline(yintercept = 0, color = 'darkred',linetype = 'dashed', size = 0.2, alpha = 0.5) +
+#   scale_fill_manual(values=c('gray70','gray35')) +
+#   xlab('') +
+#   ylab('Log2 Enrichment Score') +
+#   theme_pubr(base_size = 8)+
+#   theme(legend.direction = 'horizontal', legend.position = 'bottom',
+#         panel.border = element_rect(fill=NA)) +
+#   guides(fill = guide_legend('p<=0.05', override.aes = list(size = 0.5)))
+# ggsave('./results/agingRelevance/genage_pres_1-3.pdf',units = 'cm',width = 16,height = 8,useDingbats=F)  
+# ggsave('./results/agingRelevance/genage_pres_1-3.png',units = 'cm',width = 16,height = 8)  
+
+
 oddsplot = ggplot(xx, aes(x=cluster, y = prop, color = Aging, size = p<=0.05)) +
   geom_hline(yintercept = 0, color = 'darkred',linetype = 'dashed', size = 0.2, alpha = 0.5) +
-  geom_text(data=dplyr::select(xx,cluster,numgenes,type),aes(label=paste(numgenes,'genes')), y = -1.6, color = 'gray25', size = 6/pntnorm,hjust=0,nudge_x = 0.4) +
-  geom_point(alpha=0.7,aes(shape=p<0.05)) + 
-  geom_text_repel(data = filter(xx,p<=0.05),aes(label = paste('(',num,')',sep='')), size = 6/pntnorm, box.padding = 0.25,min.segment.length = 0.25) +
+  geom_text(data=dplyr::select(xx,cluster,numgenes,type),aes(label=paste(numgenes,'genes')), y = -1.7, color = 'gray25', size = 6/pntnorm,hjust=0,nudge_x = 0.3) +
+  geom_jitter(alpha=0.7,aes(shape=p<0.05),width = 0.3) + 
+  geom_text(data = filter(xx,p<=0.05),aes(label = num), size = 6/pntnorm) +
   scale_size_manual(values=setNames(c(0.5,2),c(F,T))) +
   scale_shape_manual(values=setNames(c(4,19),c(F,T))) +
   scale_color_gdocs() +
+  geom_vline(xintercept = seq(1.5,7.5,by=1),color='gray70',linetype='dotted',size=0.3)+
   facet_wrap(~type, ncol = 2, nrow=1) +
   coord_flip() +
   xlab('') +
   ylab('Log2 Enrichment Score') +
-  theme_pubr(base_size = 6) +
-  theme(panel.grid.major.y = element_line(color = 'gray90',linetype='dotted'),
-        legend.direction = 'horizontal', legend.position = 'bottom') +
-  guides(size = F, shape=F,
+  theme_pubr(base_size=6)+
+  theme(legend.direction = 'horizontal', legend.position = 'bottom',
+        panel.border = element_rect(fill=NA)) +
+  guides(size = guide_legend('Significance'), shape=F,
          color = guide_legend('Database')) 
 ggsave(filename = './results/agingRelevance/genage3.pdf',oddsplot,units = 'cm',width = 16,height = 6,useDingbats=F)
 ggsave(filename = './results/agingRelevance/genage3.png',oddsplot,units = 'cm',width = 16,height = 6)
@@ -222,6 +245,33 @@ lapply(genegr,function(x){
   names(xx) = c('human','model organism','drug','senescence','all-combined')
   xx
 }) %>%
-  reshape2::melt() %>%
+  reshape2::melt() %>% 
+  filter(L2!='all-combined') %>%
+  separate(L1,into=c('cluster','type'),sep='_') %>%
+  mutate(aging = agingdb[L2]) %>%
+  mutate(cluster = gsub('-',' & ',gsub('cl','',cluster))) %>%
+  mutate(type = setNames(c('Multidisease','Multicategory'),c('all','multicat'))[type]) %>%
+  select(cluster,type,aging,value) %>%
+  arrange(cluster,type,aging) %>% 
+  unique() %>%
+  set_names(c('Age of Onset Cluster','Type','Aging Database','Gene')) %>%
   write_csv('./results/agingRelevance/genageoverlaps.csv')
+lapply(genegr,function(x){
+  xx = lapply(aginggenes[c(1,2,7,8,9)],function(y){
+    intersect(x,y)
+  })
+  names(xx) = c('human','model organism','drug','senescence','all-combined')
+  xx
+}) %>%
+  reshape2::melt() %>% 
+  filter(L2!='all-combined') %>%
+  separate(L1,into=c('cluster','type'),sep='_') %>%
+  mutate(aging = agingdb[L2]) %>%
+  mutate(cluster = gsub('-',' & ',gsub('cl','',cluster))) %>%
+  mutate(type = setNames(c('Multidisease','Multicategory'),c('all','multicat'))[type]) %>%
+  select(cluster,type,aging,value) %>%
+  arrange(cluster,type,aging) %>% 
+  unique() %>%
+  set_names(c('Age of Onset Cluster','Type','Aging Database','Gene')) %>%
+  write_tsv('./results/agingRelevance/genageoverlaps.tsv')
 beepr::beep()
