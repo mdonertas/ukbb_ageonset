@@ -136,15 +136,21 @@ E(mynet)$edgewidth = summary(E(mynet)$snp_odds/30)
 net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')+
   theme_void()
 net1 = net0 +
-  geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])
+  geom_point(size = 2, color = ageonsetcolors[as.character(V(mynet)$ageonset_cl)])
 net2 = net0 +
   geom_point(size = 2, color = discatcolors[V(mynet)$discat])
 
-ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.pdf', net1, units = 'cm', width = 16, height = 8, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.png', net1, units = 'cm', width = 16, height = 8)
+# ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.pdf', net1, units = 'cm', width = 8, height = 8, useDingbats = F)
+# ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl.png', net1, units = 'cm', width = 8, height = 8)
 
-ggsave('./results/genomicAnalysis/SNPnet_discat.pdf', net2, units = 'cm', width = 16, height = 8, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPnet_discat.png', net2, units = 'cm', width = 16, height = 8)
+# ggsave('./results/genomicAnalysis/SNPnet_discat.pdf', net2, units = 'cm', width = 8, height = 8, useDingbats = F)
+# ggsave('./results/genomicAnalysis/SNPnet_discat.png', net2, units = 'cm', width = 8, height = 8)
+
+net3 = ggarrange(net1,net2,labels = 'auto')
+# ggsave('./results/genomicAnalysis/SNPnet_discat_onset_together.pdf', net3, units = 'cm', width = 16, height = 8, useDingbats = F)
+# ggsave('./results/genomicAnalysis/SNPnet_discat_onset_together.png', net3, units = 'cm', width = 16, height = 8)
+
+
 
 mynet = mydat %>%
   mutate(sameCat = factor(c('different category','same category')[1+sameCat]),
@@ -160,15 +166,40 @@ E(mynet)$edgewidth = summary((6+E(mynet)$corrected_val)/30)
 net0 = ggnet2(mynet, size = 0, edge.size = 'edgewidth', edge.color = 'gray80')+
   theme_void()
 net1 = net0 +
-  geom_point(size = 2, color = ageonsetcolors[V(mynet)$ageonset_cl])
+  geom_point(size = 2, color = ageonsetcolors[as.character(V(mynet)$ageonset_cl)])
 net2 = net0 +
   geom_point(size = 2, color = discatcolors[V(mynet)$discat])
 
-ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.pdf', net1, units = 'cm', width = 16, height = 8, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.png', net1, units = 'cm', width = 16, height = 8)
+# ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.pdf', net1, units = 'cm', width = 8, height = 8, useDingbats = F)
+# ggsave('./results/genomicAnalysis/SNPnet_ageonsetcl_corr.png', net1, units = 'cm', width = 8, height = 8)
 
-ggsave('./results/genomicAnalysis/SNPnet_discat.pdf_corr', net2, units = 'cm', width = 16, height = 8, useDingbats = F)
-ggsave('./results/genomicAnalysis/SNPnet_discat.png_corr', net2, units = 'cm', width = 16, height = 8)
+# ggsave('./results/genomicAnalysis/SNPnet_discat_corr.pdf', net2, units = 'cm', width = 8, height = 8, useDingbats = F)
+# ggsave('./results/genomicAnalysis/SNPnet_discat_corr.png', net2, units = 'cm', width = 8, height = 8)
+
+net3 = ggarrange(net1,net2,labels = 'auto')
+# ggsave('./results/genomicAnalysis/SNPnet_corr_discat_onset_together.pdf', net3, units = 'cm', width = 16, height = 8, useDingbats = F)
+# ggsave('./results/genomicAnalysis/SNPnet_corr_discat_onset_together.png', net3, units = 'cm', width = 16, height = 8)
+
+myodds = mynet[]
+myodds[myodds!=0]=E(mynet)$edgewidth
+myodds = as.matrix(myodds)
+myodds = sapply(rownames(myodds),function(a){
+  sapply(rownames(myodds),function(b){
+    aa=c(myodds[a,b],myodds[b,a])
+    if(all(aa==0)){
+      0
+    } else{
+        setdiff(aa,0)
+      }
+  })
+})
+
+
+disannot = data.frame(diseaseCategories = unname(disTreecl[rownames(myodds)]), ageonset_clusters = as.character(unname(readRDS('./data/processed/ageonset/clusters_pam_Tibs2001SEmax.rds')$clustering[rownames(myodds)])))
+rownames(disannot) =rownames(myodds)
+annotcolors = list(diseaseCategories = discatcolors,ageonset_clusters = ageonsetcolors)
+library(pheatmap)
+pheatmap(myodds, color = colorRampPalette(brewer.pal(8,'Reds'))(11),cellwidth = 5, cellheight = 5, annotation_row = disannot, annotation_col = disannot[,-3], annotation_colors = annotcolors, fontsize = 6, filename = './results/genomicAnalysis/signifSNPoverlap_heatmap_all.pdf')
 
 
 lmmod = lm(snp_odds ~ sameCat + cooccur + sameAge, data=mydat) 
