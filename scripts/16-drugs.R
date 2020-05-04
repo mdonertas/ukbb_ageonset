@@ -122,13 +122,6 @@ indat  = interactions %>%
          ChEMBLID = as.character(ChEMBLID))
 indat$Name[which(is.na(indat$Name))]=indat$ChEMBLID[which(is.na(indat$Name))]
 
-indat %>%
-  group_by(Name,ChEMBLID) %>%
-  summarise(genes_in_multicatCl1 = paste(sort(unique(intersect(gene_name,genegr$cl1_multicat))),collapse=', '),
-            genes_in_multicatCl2 = paste(sort(unique(intersect(gene_name,genegr$cl2_multicat))),collapse=', '),
-            genes_in_multicatCl12 = paste(sort(unique(intersect(gene_name,genegr$`cl1-2_multicat`))),collapse=', '),
-            otherGenes = paste(sort(unique(setdiff(gene_name,unique(c(genegr$cl1_multicat,genegr$cl2_multicat,genegr$`cl1-2_multicat`))))),collapse=', ')) %>%
-  write_csv('results/drug/signifDrugs_multicat12combined_p001_oddsInf.csv')
 
 myg = indat %>%
   mutate(Name = ifelse(grepl('insulin',Name,ignore.case = T),'Insulin',Name))%>%
@@ -146,12 +139,93 @@ labx[!labx%in%allgenes]=tolower(labx[!labx%in%allgenes])
 library(GGally)
 drugnet = ggnet2(myg,size=0,edge.color='gray70')+
   geom_point(shape = c(18,19)[factor(V(myg)$type)], 
-             size = c(3,2)[factor(V(myg)$type)],
-             color = setNames(c(ageonsetcolors[c('1','1-2')],'gray70','midnightblue'),c('cl1','cl1-2','gene','drug'))[V(myg)$color]) +
-  geom_text_repel(label=labx,box.padding = 0.01,size=6/pntnorm,
-                  color = c('gray5','gray5','midnightblue','gray70')[factor(V(myg)$color)]) +
+             size = c(4,4,3,2)[factor(V(myg)$color)],
+             color = setNames(c(ageonsetcolors[c('1','1-2')],'gray70','dodgerblue'),c('cl1','cl1-2','gene','drug'))[V(myg)$color]) +
+  geom_text_repel(label=labx,
+                  box.padding = 0.01,
+                  size=6/pntnorm,
+                  color = c('gray5','gray5','midnightblue',NA)[factor(V(myg)$color)]) +
   theme_void()
 
 ggsave('./results/drug/drugnet.pdf', drugnet,width = 16,height = 12,units = 'cm',useDingbats=F)
 ggsave('./results/drug/drugnet.png', drugnet,width = 16,height = 12,units = 'cm')
 
+drugind = read_tsv('./data/raw/chembl_drug_indications.tsv') %>%
+  rename(ChEMBLID = `Parent Molecule ChEMBL ID`)
+
+xx = indat %>%
+  group_by(Name,ChEMBLID) %>%
+  summarise(genes_in_multicatCl1 = paste(sort(unique(intersect(gene_name,genegr$cl1_multicat))),collapse=', '),
+            genes_in_multicatCl2 = paste(sort(unique(intersect(gene_name,genegr$cl2_multicat))),collapse=', '),
+            genes_in_multicatCl12 = paste(sort(unique(intersect(gene_name,genegr$`cl1-2_multicat`))),collapse=', '),
+            otherGenes = paste(sort(unique(setdiff(gene_name,unique(c(genegr$cl1_multicat,genegr$cl2_multicat,genegr$`cl1-2_multicat`))))),collapse=', ')) %>% setNames(c('Drug Name','ChEMBLID','Multicategory Cluster 1 Genes',                                             'Multicategory Cluster 2 Genes',                                    'Multicategory Cluster 1 & 2 Genes',                                                                      'Other Genes')) %>%
+  left_join(drugind) %>%
+  mutate_all(list(~na_if(.,"")))
+write_tsv(xx,'results/drug/signifDrugs_multicat12combined_p001_oddsInf.tsv')
+write_csv(xx,'results/drug/signifDrugs_multicat12combined_p001_oddsInf.csv')
+
+
+unique((xx %>%
+  ungroup() %>%
+  # mutate(indication = ifelse(is.na(`EFO Terms`),'-',`EFO Terms`))%>%
+  filter(`Max Phase for Indication`>=4) %>%
+  select(`Drug Name`,`EFO Terms`) %>%
+  unique())$`EFO Terms`)
+  # mutate(drug = paste(`Drug Name`,' (',`ChEMBLID`,'; ',`Max Phase for Indication`,')',sep=''))%>%
+  # select(`Drug Name`,`EFO Terms`,`ChEMBLID`) %>%
+  # unique() %>%
+  # na.omit() %>% head()
+  # group_by(`EFO Terms`) %>%
+  # summarise(n=length(unique(ChEMBLID)),
+  #           Drugs = paste(sort(unique(`drug`)),collapse=', ')) %>%
+  # View()
+
+##### other drugs with the same indications
+indicationlist = unique((xx %>%
+                           ungroup() %>%
+                           # mutate(indication = ifelse(is.na(`EFO Terms`),'-',`EFO Terms`))%>%
+                           filter(`Max Phase for Indication`>=4) %>%
+                           select(`Drug Name`,`EFO Terms`) %>%
+                           unique())$`EFO Terms`)
+
+
+library(ggthemes)
+inddat = drugind %>%
+  filter(`Max Phase for Indication`>=4) %>%
+  filter(`EFO Terms` %in% indicationlist) %>%
+  left_join(interactions) %>%
+  select(ChEMBLID, `EFO Terms`, gene_name) %>%
+  filter(gene_name %in% allgenes) %>%
+  mutate(cl12 = gene_name %in% genegr$cl12combined_multicat) %>%
+  mutate(hit_drugs = ChEMBLID %in% unique(drugxx$ChEMBLID)) 
+
+ind_p1 = select(inddat, ChEMBLID, `EFO Terms`, hit_drugs) %>%
+  unique() %>%
+  mutate(`EFO Terms` = fct_reorder(`EFO Terms`, hit_drugs, function(x)mean(x,na.rm=T))) %>% 
+  mutate(hit_drugs = c('other','significant hit')[1+hit_drugs]) %>%
+  ggplot(aes(x = `EFO Terms`, fill = hit_drugs)) + 
+  geom_bar(position = 'fill') +
+  coord_flip() +
+  xlab('') +
+  ylab('% Approved Drugs') +
+  scale_fill_manual(values = c('gray70','dodgerblue')) +
+  guides(fill = guide_legend(title=NULL)) +
+  theme(legend.position = 'bottom') 
+
+ind_p2 = select(inddat, gene_name, `EFO Terms`, cl12) %>%
+  unique() %>%
+  mutate(`EFO Terms` = fct_reorder(`EFO Terms`, cl12, function(x)mean(x,na.rm=T))) %>% 
+  mutate(cl12 = factor(c('other','multicat cl1 or cl2')[1+cl12],levels = c('other','multicat cl1 or cl2'))) %>%
+  ggplot(aes(x = `EFO Terms`, fill = cl12)) + 
+  geom_bar(position = 'fill') +
+  coord_flip() +
+  xlab('') +
+  ylab('% Unique Targets') +
+  scale_fill_manual(values = c('gray70','dodgerblue')) +
+  guides(fill = guide_legend(title=NULL)) +
+  theme(legend.position = 'bottom') 
+
+indp=ggarrange(ind_p1,ind_p2, labels = 'auto', ncol = 1, nrow = 2)
+
+ggsave('./results/drug/indication_perc.pdf',indp, units = 'cm', width = 16, height = 16, useDingbats = F)
+ggsave('./results/drug/indication_perc.png', indp, units = 'cm', width = 16, height = 16)
