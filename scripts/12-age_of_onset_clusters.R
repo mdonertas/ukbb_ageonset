@@ -58,7 +58,9 @@ library(TSclust)
 # permRes <- permRes %>%
 #   filter(Disease %in% c('Top',disSet$Disease))
 # saveRDS(permRes,'./data/processed/ageonset/permRes_50000.rds')
+ageonsetcl = readRDS('./data/processed/ageonset/clusters_pam_Tibs2001SEmax.rds')$cluster
 permRes <- readRDS('./data/processed/ageonset/permRes_50000.rds') %>%
+  mutate(cluster = as.character(ageonsetcl[as.character(Disease)])) %>%
   mutate(category = factor(unname(disTreecl[as.character(Disease)]))) %>%
   mutate(Disease = fct_reorder(Disease, as.numeric(category)))
 
@@ -102,18 +104,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 27, useDingbats = F)
 
@@ -123,18 +125,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 12, useDingbats = F)
 
@@ -144,18 +146,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 12, useDingbats = F)
 
@@ -165,18 +167,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 22, useDingbats = F)
 
@@ -186,18 +188,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 27, useDingbats = F)
 
@@ -207,18 +209,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 32, useDingbats = F)
 
@@ -228,18 +230,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 22, useDingbats = F)
 
@@ -249,20 +251,20 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
-  facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  facet_wrap(~Disease, scales = 'free', ncol = 2) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
-ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 7, useDingbats = F)
+ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 12, height = 12, useDingbats = F)
 
 i=9
 as.character(unique(permRes$category)[i])
@@ -270,18 +272,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 12, useDingbats = F)
 
@@ -291,18 +293,18 @@ as.character(unique(permRes$category)[i])
 permRes %>%
   filter(category == as.character(unique(permRes$category)[i])) %>%
   mutate(value = value/5) %>%
-  group_by(Disease, category, Age) %>%
+  group_by(Disease, category, Age,cluster) %>%
   summarise(mean = mean(value), sd = sd(value), 
             fq = quantile(value,0.025), tq = quantile(value,0.975),
             median = median(value)) %>% 
   ggplot(aes(x = Age)) +
   geom_smooth(aes(y=median), color = 'gray60', se = F, method = 'loess') +
-  geom_point(aes(y=median, color = category)) +
+  geom_point(aes(y=median, color = cluster)) +
   geom_segment(aes(y = fq, yend = tq, xend = Age), color = 'gray70', size = 0.3) + 
   facet_wrap(~Disease, scales = 'free', ncol = 4) +
-  ylab('Number of participants (in 10,000)') +
-  scale_color_manual(values = discatcolors) +
-  guides(color = F) +
+  ylab('No of cases diagnosed / 10,000 people at a given age') +
+  scale_color_manual(values = ageonsetcolors) +
+  guides(color = guide_legend('Age-of-onset cluster')) +
   ggtitle(as.character(unique(permRes$category)[i]))
 ggsave(paste('./results/ageonset/',gsub('/','_',as.character(unique(permRes$category)[i])),'.pdf',sep=''),units = 'cm', width = 24, height = 12, useDingbats = F)
 
