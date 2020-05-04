@@ -280,8 +280,30 @@ ggsave('./results/functionalAnalysis/gores_final.pdf',units='cm',width=20,height
 ggsave('./results/functionalAnalysis/gores_final.png',units='cm',width=20,height = 10)
 
 newdf %>%
+  dplyr::select(1,8,2,3,10,4,15,21,22,23) %>% 
+  set_names(c('GO Category','GO Term','GO Ontology','Age of Onset Cluster','Type',
+              'p-value','BY Corrected p-value','Enrichment Score','Log 2 Enrichment Score','Representative GO Category')) %>%
   write_csv('./results/functionalAnalysis/gores_signif_reps.csv')
+
+newdf %>%
+  dplyr::select(1,8,2,3,10,4,15,21,22,23) %>% 
+  set_names(c('GO Category','GO Term','GO Ontology','Age of Onset Cluster','Type',
+              'p-value','BY Corrected p-value','Enrichment Score','Log 2 Enrichment Score','Representative GO Category')) %>%
+  write_tsv('./results/functionalAnalysis/gores_signif_reps.tsv')
 
 GOres2 %>%
   left_join(newdf)%>%
+  dplyr::select(1,6,7,9,10,2,15,21,22,23) %>%
+  arrange(cluster,type,ontology,over_rep_padj) %>%
+  set_names(c('GO Category','GO Term','GO Ontology','Age of Onset Cluster','Type',
+              'p-value','BY Corrected p-value','Enrichment Score','Log 2 Enrichment Score','Representative GO Category')) %>%
   write_csv('./results/functionalAnalysis/gores_all.csv')
+
+GOres2 %>%
+  left_join(newdf)%>%
+  dplyr::select(1,6,7,9,10,2,15,21,22,23) %>%
+  arrange(cluster,type,ontology,over_rep_padj) %>%
+  set_names(c('GO Category','GO Term','GO Ontology','Age of Onset Cluster','Type',
+              'p-value','BY Corrected p-value','Enrichment Score','Log 2 Enrichment Score','Representative GO Category')) %>%
+  write_tsv('./results/functionalAnalysis/gores_all.tsv')
+
