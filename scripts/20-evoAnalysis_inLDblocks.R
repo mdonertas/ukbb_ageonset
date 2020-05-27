@@ -56,6 +56,31 @@ ukkb_ld_onedis = ld_onedis %>%
   guides(fill = F) +
   xlab('Age of onset cluster') + ylab('Risk Allele Frequency') +
   stat_compare_means(comparisons = list(c('1','2'),c('2','3'),c('1','3')), label = 'p.signif')
+cl1_rafmed = (ld_onedis %>% 
+  mutate(cluster=as.factor(cluster)) %>%
+  filter(pop == 'UKBB' & cluster == 1) )$RAF_median
+cl2_rafmed = (ld_onedis %>% 
+                mutate(cluster=as.factor(cluster)) %>%
+                filter(pop == 'UKBB' & cluster == 2) )$RAF_median
+cl3_rafmed = (ld_onedis %>% 
+                mutate(cluster=as.factor(cluster)) %>%
+                filter(pop == 'UKBB' & cluster == 3) )$RAF_median
+
+skewness(cl1_rafmed)
+combinedrafmed = c(cl1_rafmed,cl2_rafmed,cl3_rafmed)
+permskew_cl1 = sapply(1:10000,function(i){
+  skewness(sample(combinedrafmed,length(cl1_rafmed)))
+})
+permskew_cl2 = sapply(1:10000,function(i){
+  skewness(sample(combinedrafmed,length(cl2_rafmed)))
+})
+permskew_cl3 = sapply(1:10000,function(i){
+  skewness(sample(combinedrafmed,length(cl3_rafmed)))
+})
+mean((permskew_cl1)<=(skewness(cl1_rafmed)))
+mean((permskew_cl2)<=(skewness(cl2_rafmed)))
+mean((permskew_cl3)<=(skewness(cl3_rafmed)))
+
 
 onekg_ld_onedis = ld_onedis %>% 
   mutate(cluster=as.factor(cluster)) %>%
@@ -100,7 +125,8 @@ onedisease_ukbb_sampling = data.frame(cluster = factor(rep(1:3,each=1000),levels
                aes(yintercept = ..y..), linetype = 'dashed') +
   xlab('Age of onset cluster') + ylab('Median RAF (for 100 Blocks)') +
   scale_color_manual(values = ageonsetcolors) +
-  guides(color=F)
+  guides(color=F) +
+  stat_compare_means(comparisons = list(c('1','2'),c('1','3'),c('2','3')),label = 'p.signif')
 
 ld_onecl = apply(LDblocks,1,function(x){
   st=x['start']
@@ -188,7 +214,8 @@ onecluster_ukbb_sampling = data.frame(cluster = factor(rep(1:3,each=1000),levels
                aes(yintercept = ..y..), linetype = 'dashed') +
   xlab('Age of onset cluster') + ylab('Median RAF (for 100 Blocks)') +
   scale_color_manual(values = ageonsetcolors) +
-  guides(color=F)
+  guides(color=F) +
+  stat_compare_means(comparisons = list(c('1','2'),c('1','3'),c('2','3')),label = 'p.signif')
 
 
 ####
@@ -278,7 +305,8 @@ antagonist_ukbb_sampling = data.frame(cluster = factor(rep(1:2,each=1000),levels
                aes(yintercept = ..y..), linetype = 'dashed') +
   xlab('Age of onset cluster') + ylab('Median RAF (for 100 Blocks)') +
   scale_color_manual(values = ageonsetcolors) +
-  guides(color=F)
+  guides(color=F) +
+  stat_compare_means(comparisons = list(c('1','2')),label = 'p.signif')
 
 allukbb=ggarrange(ukkb_ld_onedis+ggtitle('SNPs associated with\none disease'), ukkb_ld_onecl+ggtitle('SNPs associated with\none cluster'), ukkb_ld_anta+ggtitle('SNPs Antagonistic Between\nCluster1 and Cluster2'), ncol=3,labels = 'auto',nrow=1) 
 
@@ -287,8 +315,8 @@ allukbb_sampling=ggarrange(onedisease_ukbb_sampling+ggtitle('SNPs associated wit
 ggsave('./results/evoAnalysis/RAF_ukbb_ldblock.pdf',allukbb,units = 'cm',width = 20 ,height = 7,useDingbats =F)
 ggsave('./results/evoAnalysis/RAF_ukbb_ldblock.png',allukbb,units = 'cm',width = 20,height = 7)
 
-ggsave('./results/evoAnalysis/RAF_ukbb_sampling_ldblock.pdf',allukbb_sampling,units = 'cm',width = 20 ,height = 7,useDingbats =F)
-ggsave('./results/evoAnalysis/RAF_ukbb_sampling_ldblock.png',allukbb_sampling,units = 'cm',width = 20,height = 7)
+ggsave('./results/evoAnalysis/RAF_ukbb_sampling_ldblock.pdf',allukbb_sampling,units = 'cm',width = 20 ,height = 8,useDingbats =F)
+ggsave('./results/evoAnalysis/RAF_ukbb_sampling_ldblock.png',allukbb_sampling,units = 'cm',width = 20,height = 8)
 
 onekg_ld_anta=ld_cl1cl2_anta %>% 
   mutate(cluster=as.factor(cluster)) %>%
