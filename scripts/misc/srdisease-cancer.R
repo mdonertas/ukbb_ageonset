@@ -27,6 +27,8 @@ canMat2 <- t(sapply(eidx,function(x){
 canMat2 <- canMat2[eidx,]
 colnames(canMat2) <- colnames(canMat)
 canMat <- canMat2
+canMat = cbind(canMat,as.numeric(rowSums(canMat)>0))
+colnames(canMat)[ncol(canMat)]='anycancer'
 # disMat <- t(sapply(eidx,function(x){
 #   if (x %in% rownames(disMat)){disMat[x,]
 #   }else{
@@ -36,7 +38,7 @@ disMat <- disMat[eidx,]
 
 RRtable <- lapply(colnames(disMat), function(disAnm){
   disA <- disMat[,disAnm]
-  xx <- as.tibble(t(sapply(colnames(canMat), function(disBnm){
+  xx <- as.tibble(t(sapply(colnames(canMat)[80:82], function(disBnm){
     disB <- canMat[,disBnm]
     Nab <- sum((disA == 1) & (disB == 1))
     Nnab <- sum((disA == 0) & (disB == 1))
@@ -50,7 +52,7 @@ RRtable <- lapply(colnames(disMat), function(disAnm){
     ul <- exp(log(RR) + (1.96 * cif))
     c(Nab=Nab,Nnab=Nnab,Ta=Ta,Tna=Tna,Pexp=Pexp,Pnexp=Pnexp,RR=RR,cif=cif,ll=ll,ul=ul)
   }))) %>%
-    mutate(disB = colnames(canMat))
+    mutate(disB = colnames(canMat)[80:82])
   return(xx)
 })
 names(RRtable) <- colnames(disMat)
@@ -76,8 +78,8 @@ cormat = apply(canMat,2,function(x){
 })
 
 rr2 <- RRtable %>%
-  filter(uplevel == F & sublevel == F) %>%
-  filter((RR > 1 & ll > 1) | (RR < 1 & ul < 1)) %>%
+  filter((uplevel == F & sublevel == F) | disB == 'anycancer') %>%
+  filter(((RR > 1 & ll > 1) | (RR < 1 & ul < 1)) | disB == 'anycancer') %>%
   mutate(RR = log2(RR)) %>%
   mutate(RR_rank = dense_rank(abs(RR)),
          RR_type = sign(RR)) %>%
