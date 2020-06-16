@@ -164,6 +164,8 @@ xx = indat %>%
 write_tsv(xx,'results/drug/signifDrugs_multicat12combined_p001_oddsInf.tsv')
 write_csv(xx,'results/drug/signifDrugs_multicat12combined_p001_oddsInf.csv')
 
+xx = read_csv('results/drug/signifDrugs_multicat12combined_p001_oddsInf.csv')
+
 
 unique((xx %>%
   ungroup() %>%
@@ -229,3 +231,66 @@ indp=ggarrange(ind_p1,ind_p2, labels = 'auto', ncol = 1, nrow = 2)
 
 ggsave('./results/drug/indication_perc.pdf',indp, units = 'cm', width = 16, height = 16, useDingbats = F)
 ggsave('./results/drug/indication_perc.png', indp, units = 'cm', width = 16, height = 16)
+
+
+druglist = xx$ChEMBLID
+
+
+chembldat <- function(nm){
+  library(RCurl)
+  library(jsonlite)
+  nm <- URLencode(nm)
+  dat <- getURL(paste("https://www.ebi.ac.uk/chembl/api/data/molecule/", 
+                      nm, ".json", sep = ""))
+  if(dat ==''){return(NA)}
+  else{dat <- fromJSON(dat)
+  return(dat)}
+}
+chembldata = lapply(druglist,chembldat)
+
+names(chembldata) = xx$`Drug Name`
+
+atcnames = setNames(c('Alimentary tract and metabolism',
+'Blood and blood forming organs',
+'Cardiovascular system',
+'Dermatologicals',
+'Genito urinary system and sex hormones',
+'Systemic hormonal preparations, excluding sex hormones and insulins',
+'Antiinfective for systemic use',
+'Antineoplastic and immunomodulating agents',
+'Musculo-skeletal system',
+'Nervous system',
+'Antiparasitic products, insecticides and repellents',
+'Respiratory system',
+'Sensory organs',
+'Various'), c('A', 'B', 'C', 'D', 'G', 'H', 'J', 'L', 'M', 'N', 'P', 'R', 'S', 'V'))
+
+chembldata$CHEMBL56253$atc_classifications
+atc = sapply(chembldata,function(x)unique(substr(x$atc_classifications,1,1))) %>%
+  reshape2::melt() %>%
+  unique() %>%
+  mutate(atc = factor(atcnames[as.character(value)],levels = rev(atcnames))) %>%
+  ggplot(aes(x = atc)) +
+  geom_bar(aes(fill = value)) +
+  coord_flip() +
+  guides(fill = F) +
+  xlab(NULL) + ylab('# of drugs') +
+  scale_fill_gdocs() +
+  ggtitle('ATC Classification Level I')
+sapply(chembldata,function(x)unique(substr(x$atc_classifications,1,1))) %>%
+  reshape2::melt() %>%
+  unique() %>%
+  mutate(atc = factor(atcnames[as.character(value)],levels = rev(atcnames))) %>%
+  View()
+
+xx %>%
+select(`Drug Name`,`EFO Terms`, `Max Phase for Indication`) %>%
+na.omit() %>%
+set_names(c('drug','indications','phase')) %>%
+  head()
+filter(phase >=3) %>%
+group_by(indications) %>%
+summarise(n = length(unique(drug))) %>%
+ggplot(aes(x = reorder(indications,n), y= n)) +
+geom_bar(stat = 'identity') +
+coord_flip()
