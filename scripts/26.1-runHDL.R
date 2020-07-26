@@ -1,9 +1,9 @@
 library(HDL)
-source('/nfs/research1/thornton/ukbb_ageonset/scripts/00-setup.R')
+source('./scripts/00-setup.R')
 tr1id = commandArgs(trailingOnly = T)[1]
 tr2id = commandArgs(trailingOnly = T)[2]
 n=484598 
-g1 = read_tsv(paste('/nfs/research1/thornton/ukbb_ageonset/data/processed/ukbb/gwas/bolt/a', tr1id, '.imp.stats',
+g1 = read_tsv(paste('./data/processed/ukbb/gwas/bolt/a', tr1id, '.imp.stats',
                     sep = '')) %>%
   mutate(CHR=as.numeric(CHR))%>%
   arrange(CHR,BP) %>%
@@ -14,7 +14,7 @@ g1 = read_tsv(paste('/nfs/research1/thornton/ukbb_ageonset/data/processed/ukbb/g
   select(SNP,A1,A2,N,b,se) %>%
   as.data.frame()
 
-g2 = read_tsv(paste('/nfs/research1/thornton/ukbb_ageonset/data/processed/ukbb/gwas/bolt/a', tr2id, '.imp.stats',
+g2 = read_tsv(paste('./data/processed/ukbb/gwas/bolt/a', tr2id, '.imp.stats',
                     sep = '')) %>%
   mutate(CHR=as.numeric(CHR))%>%
   arrange(CHR,BP) %>%
@@ -24,8 +24,8 @@ g2 = read_tsv(paste('/nfs/research1/thornton/ukbb_ageonset/data/processed/ukbb/g
   mutate(N = n) %>%
   select(SNP,A1,A2,N,b,se) %>%
   as.data.frame()
-LD.path <- "/nfs/research1/thornton/ukbb_ageonset/data/raw/hdl_refpanel/UKB_imputed_SVD_eigen99_extraction"
-outx = paste('/nfs/research1/thornton/ukbb_ageonset/data/processed/hdl/',tr1id,'_',tr2id,sep='')
+LD.path <- "./data/raw/hdl_refpanel/UKB_imputed_SVD_eigen99_extraction"
+outx = paste('./data/processed/hdl/',tr1id,'_',tr2id,sep='')
 res.HDL <- HDL.rg(g1, g2, LD.path, Nref = 335265, N0= n, eigen.cut = 0.99, output.file = paste(outx,'.txt',sep=''))
 saveRDS(res.HDL,file = paste(outx,'.rds',sep=''))
 
