@@ -46,8 +46,8 @@ disannot = data.frame(diseaseCategories = unname(disTreecl[numSignif$disease]),
 rownames(disannot) = numSignif$disease
 disannot = disannot %>%
   mutate(disease = rownames(disannot))
-ageonsetcolors = setNames(rev(brewer.pal(4,'Oranges')),1:4)
-annotcolors = list(diseaseCategories = discatcolors,ageonset_clusters = setNames(rev(brewer.pal(4,'Oranges')),1:4))
+# ageonsetcolors = setNames(rev(brewer.pal(4,'Oranges')),1:4)
+annotcolors = list(diseaseCategories = discatcolors,ageonset_clusters = setNames(ageonsetcolors,1:4))
 
 numSignif_by_ageonset = numSignif %>%
   left_join(disannot) %>%
@@ -95,9 +95,9 @@ ggsave('./results/genomicAnalysis/numGene_perDisease_byCategory.png', numSignif_
 
 summary(numSignif$numSignif)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-# 0.00    0.00    4.50   58.82   39.00 1213.00 
+# 0.00    0.00    6.00   79.38   50.25 1608.00
 sum(numSignif$numSignif == 0)
-# [1] 44
+# [1] 42
 
 anova(lm(numSignif ~ ageonset_clusters, data = left_join(numSignif,disannot)))
 tapply(X = left_join(numSignif,disannot)$numSignif, INDEX = left_join(numSignif,disannot)$diseaseCategories,summary)
@@ -110,12 +110,12 @@ rownames(genemat) = genemat$gene
 genemat$gene= NULL
 genemat = as.matrix(genemat)
 dim(genemat)
-# [1] 2933   72
+# [1] 3816   74
 table(rowSums(genemat!=0)>1)
 # FALSE  TRUE 
-# 1165  1768 
+# 1467  2349 
 mean((rowSums(genemat!=0)>1))
-# [1] 0.6027958
+# [1] 0.615566
 
 colnames(genemat) = disCoding[as.character(colnames(genemat))]
 cat_per_gene = apply(genemat,1,function(x){

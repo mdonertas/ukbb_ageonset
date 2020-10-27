@@ -22,22 +22,16 @@ gwas2GRanges <- function(gwasRes, SNP = "RefSNP_id", start = "BP", chr = "CHR", 
 }
 
 martx=biomaRt::useMart('ensembl','hsapiens_gene_ensembl')
-genemap <- biomaRt::getBM(attributes = c('entrezgene','hgnc_symbol','ensembl_gene_id','description'),
-                          mart = martx)
+genemap <- biomaRt::getBM(attributes = c('entrezgene_id','hgnc_symbol','ensembl_gene_id','description'),
+                          mart = martx) %>%
+  dplyr::rename(entrezgene = entrezgene_id)
 
 snp2gene_eQTL <- function(gwasRes, eQTLfile, genemap){
   library(tidyverse)
   tissue <- strsplit(sapply(strsplit(eQTLfile,'/'),function(x)x[length(x)]),'[.]')[[1]][1]
   eqtl <- read_tsv(eQTLfile) %>%
-    dplyr::rename(BP = variant_pos,
-                  CHR = chr,
-                  ALLELE0 = alt,
-                  ALLELE1 = ref) %>%
-    dplyr::select(CHR, BP, ALLELE0, ALLELE1, gene_id, tss_distance, slope, pval_beta)%>%
-    dplyr::mutate(gene_id=sapply(strsplit(gene_id,'[.]'),function(x)x[1]))%>%
     inner_join(gwasRes) %>%
-    dplyr::select(SNP,CHR, BP, ALLELE1, ALLELE0, gene_id, tss_distance, slope, pval_beta)%>%
-    mutate(tissue = tissue) %>%
+    dplyr::select(SNP,CHR, BP, ALLELE1, ALLELE0, gene_id, slope, pval_beta, tissue)%>%
     unique()
   genemap <- genemap %>%
     unique()%>%
@@ -69,15 +63,13 @@ for(colnm in colnames(mcols(gwas_as_GR))){
 }
 geneids <- unique(allvar$GENEID)
 geneids <- geneids[complete.cases(geneids)]
-martx=biomaRt::useMart('ensembl','hsapiens_gene_ensembl')
-genemap <- biomaRt::getBM(attributes = c('entrezgene','hgnc_symbol','ensembl_gene_id','description'),
-                          mart = martx) %>% unique() %>%
+genemap <- genemap %>% unique() %>%
   mutate(entrezgene=as.character(entrezgene))
 allvar <- as.tibble(allvar) %>%
   filter(LOCATION!='intergenic') %>%
   mutate(entrezgene=GENEID)%>%
   left_join(genemap)
-rm(list=setdiff(ls(),c('allvar','gwas_as_GR','gwasRes','gwas2Granges')))
+rm(list=setdiff(ls(),c('allvar','gwas_as_GR','gwasRes','gwas2Granges','genemap')))
 saveRDS(allvar,'./temp/allvar.rds')
 proxyres <- allvar %>%
   dplyr::rename(SNP = RefSNP_id,
@@ -96,14 +88,19 @@ print('proxy mapping is done')
 # system('mkdir ./data/processed/genomicAnalysis')
 saveRDS(proxyres, file='data/processed/genomicAnalysis/snp2gene_proxy.rds')
 print('proxy file is saved')
+rm(allvar)
+rm(proxyres)
+rm(gwas_as_GR)
 
-filesx <- list.files('../melike/projects/shared_data/eQTL_GTEx_20180904/data/processed/signif_tissue_eQTLs/',full.names=T)
+filesx <- list.files('../melike/projects/shared_data/GTEx_v8/data/processed/signif_tissue_eQTLs_hg19_refaltamb',full.names=T)
 eQTLres <- lapply(filesx,function(fx){
   snp2gene_eQTL(gwasRes,fx,genemap)
 })
 print('eqtl mapping is done')
+saveRDS(eQTLres, file='data/processed/genomicAnalysis/snp2gene_eQTL_v1.rds')
+print('eqtl_v1 data is saved')
 
-eQTLres <- reshape2::melt(eQTLres,id.vars=colnames(eQTLres[[1]])) %>%
+eQTLres <- reduce(eQTLres,rbind) %>%
   dplyr::rename(Ref = ALLELE1, Alt=ALLELE0, eQTL_ensembl = gene_id, eQTL_entrez = entrezgene, eQTL_hgnc=hgnc_symbol,
                 eQTL_slope=slope, eQTL_pval=pval_beta, eQTL_tissue=tissue) %>%
   dplyr::select(SNP, CHR, BP, Ref, Alt, eQTL_entrez, eQTL_hgnc, eQTL_ensembl, eQTL_slope, eQTL_pval, eQTL_tissue)%>%

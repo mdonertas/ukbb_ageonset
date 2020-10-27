@@ -18,7 +18,8 @@ gwasassocs <- lapply(unique(unlist(strsplit(gwascat$MAPPED_TRAIT,', '))),functio
 })
 names(gwasassocs) <- unique(unlist(strsplit(gwascat$MAPPED_TRAIT,', ')))
 
-# gwasassocs <- readRDS('./data/processed/GWASCat/assocs_20190730.rds')
+# saveRDS(gwasassocs,'./data/processed/GWASCat/assocs_20201027.rds')
+# gwasassocs <- readRDS('./data/processed/GWASCat/assocs_20201027.rds')
 
 proxygenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_proxyGenes.rds',sep=''),function(x){
   x=readRDS(x)
@@ -34,10 +35,14 @@ eQTLgenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasR
 })
 names(eQTLgenes)=disIDs
 
+saveRDS(proxygenes, './data/processed/genomicAnalysis/signif_proxygenes.rds')
+saveRDS(eQTLgenes, './data/processed/genomicAnalysis/signif_eQTLgenes.rds')
+
 signifgenes <- sapply(disIDs,function(dis){
   union(proxygenes[[dis]],eQTLgenes[[dis]])
 })
 names(signifgenes)=disIDs
+saveRDS(signifgenes, './data/processed/genomicAnalysis/signif_allgenes.rds')
 
 # allingwascat <- unique(unlist(strsplit(unlist(strsplit(gwascat$MAPPED_GENE,', ')),' - ')))
 # allingwascat <- length(allingwascat)

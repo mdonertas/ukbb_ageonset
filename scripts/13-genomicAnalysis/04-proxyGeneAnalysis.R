@@ -34,7 +34,7 @@ disannot = data.frame(diseaseCategories = unname(disTreecl[numSignif$disease]),
 rownames(disannot) = numSignif$disease
 disannot = disannot %>%
   mutate(disease = rownames(disannot))
-ageonsetcolors = setNames(rev(brewer.pal(4,'Oranges')),1:4)
+# ageonsetcolors = setNames(rev(brewer.pal(4,'Oranges')),1:4)
 annotcolors = list(diseaseCategories = discatcolors,ageonset_clusters = setNames(rev(brewer.pal(4,'Oranges')),1:4))
 
 numSignif_by_ageonset = numSignif %>%
@@ -83,7 +83,7 @@ ggsave('./results/genomicAnalysis/numProxyGene_perDisease_byCategory.png', numSi
 
 summary(numSignif$numSignif)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-# 0.00    0.00    1.50   37.98   27.25  799.00 
+# 0.00    0.00    1.50   40.66   29.50  853.00
 sum(numSignif$numSignif == 0)
 # [1] 45
 
@@ -98,12 +98,12 @@ rownames(genemat) = genemat$gene
 genemat$gene= NULL
 genemat = as.matrix(genemat)
 dim(genemat)
-# [1] 2033   71
+# [1] 2167   71
 table(rowSums(genemat!=0)>1)
 # FALSE  TRUE 
-# 903  1130 
+# 964  1203 
 mean((rowSums(genemat!=0)>1))
-# [1] 0.5558288
+# [1] 0.5551454
 
 colnames(genemat) = disCoding[as.character(colnames(genemat))]
 cat_per_gene = apply(genemat,1,function(x){
