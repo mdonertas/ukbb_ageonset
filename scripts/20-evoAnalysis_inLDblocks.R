@@ -339,3 +339,132 @@ fig4=ggarrange(allukbb,onekg_ld_anta,nrow=2,ncol=1,labels=c('','d'),widths=c(1.1
 ggsave('./results/evoAnalysis/fig4.pdf',fig4,units = 'cm',width = 22 ,height = 15,useDingbats =F)
 ggsave('./results/evoAnalysis/fig4.png',fig4,units = 'cm',width = 22,height = 15)
 
+###cl1-3 antagonistic
+ld_cl1cl3_anta = apply(LDblocks,1,function(x){
+  st=x['start']
+  en=x['stop']
+  ch=x['CHR']
+  xx = signifSNPs %>%
+    filter(cl1_cl3 == ' antagonist' & !grepl('agonist',cl1_cl2) & !grepl('agonist', cl2_cl3)) %>%
+    filter(CHR==ch & BP<=en & BP>=st) %>%
+    select(-disID,-BETA,-P_BOLT_LMM_INF) %>%
+    unique() %>%
+    mutate(cluster = factor(cluster)) %>% 
+    select(SNP,cluster,UKBB_RAF,ALL_RAF,AFR_RAF,EAS_RAF,AMR_RAF,SAS_RAF,EUR_RAF) %>% 
+    gather(key = 'pop', value ='raf',-SNP,-cluster) %>%
+    mutate(pop = factor(gsub('_RAF','',pop),levels = c('UKBB','ALL','AFR','AMR','EAS','EUR','SAS'))) %>%
+    na.omit()
+  if(nrow(xx)>0){
+    xx %>%
+      group_by(cluster,pop) %>% 
+      summarise(RAF_mean = mean(raf,na.rm=T),
+                RAF_min = min(raf,na.rm=T),
+                RAF_max = max(raf,na.rm=T),
+                RAF_sd = sd(raf,na.rm=T),
+                RAF_q1 = quantile(raf,probs = 0.25, na.rm=T),
+                RAF_q3 = quantile(raf,probs = 0.75, na.rm=T),
+                RAF_median = quantile(raf,probs = 0.75, na.rm=T)) %>%
+      mutate(LDblock=x['block'])
+  } else {NULL}
+}) 
+ld_cl1cl3_anta=ld_cl1cl3_anta[!sapply(ld_cl1cl3_anta,is.null)]
+ld_cl1cl3_anta = reshape2::melt(ld_cl1cl3_anta,id.vars = colnames(ld_cl1cl3_anta[[1]])) 
+ukkb_ld_anta= ld_cl1cl3_anta %>% 
+  mutate(cluster=as.factor(cluster)) %>%
+  filter(pop == 'UKBB') %>%
+  ggplot(aes(y = RAF_median, x= cluster, fill = cluster)) +
+  geom_violin()+
+  geom_sina(size=1,alpha=1)+
+  geom_boxplot(width=0.1,fill='white') +
+  scale_fill_manual(values = ageonsetcolors) +
+  stat_summary(fun.y = 'median', aes(label = round(..y..,2)), geom = "label",fill='white')  +
+  guides(fill = F) +
+  xlab('Age of onset cluster') + ylab('Risk Allele Frequency')+
+  ylim(0,1) +
+  stat_compare_means(label = 'p.format',label.y=0.01,label.x = 0.5,hjust=0)
+
+onekg_ld_anta = ld_cl1cl3_anta %>% 
+  mutate(cluster=as.factor(cluster)) %>%
+  filter(pop != 'UKBB') %>%
+  ggplot(aes(y = RAF_median, x= cluster, fill = cluster)) +
+  facet_wrap(~pop) +
+  geom_violin()+
+  geom_sina(size=1,alpha=1)+
+  geom_boxplot(width=0.1,fill='white') +
+  scale_fill_manual(values = ageonsetcolors) +
+  stat_summary(fun.y = 'median', aes(label = round(..y..,2)), geom = "label",fill='white')  +
+  guides(fill = F) +
+  xlab('Age of onset cluster') + ylab('Risk Allele Frequency')+
+  ylim(0,1) +
+  stat_compare_means(label = 'p.format',label.y=0.01,label.x = 0.5,hjust=0)
+
+all_anta = ggarrange(ukkb_ld_anta+ggtitle('UK Biobank'), onekg_ld_anta, labels = 'auto', nrow=1,ncol=2, widths = c(1,2))
+
+ggsave('./results/evoAnalysis/RAF_all_antagonist_ldblock_cl13.pdf',all_anta, units = 'cm', width = 24, height = 12, useDingbats = F)
+ggsave('./results/evoAnalysis/RAF_all_antagonist_ldblock_cl13.png',all_anta, units = 'cm', width = 24, height = 12)
+
+#### cl2-3
+
+ld_cl2cl3_anta = apply(LDblocks,1,function(x){
+  st=x['start']
+  en=x['stop']
+  ch=x['CHR']
+  xx = signifSNPs %>%
+    filter(cl2_cl3 == ' antagonist' & !grepl('agonist',cl1_cl2) & !grepl('agonist', cl1_cl3)) %>%
+    filter(CHR==ch & BP<=en & BP>=st) %>%
+    select(-disID,-BETA,-P_BOLT_LMM_INF) %>%
+    unique() %>%
+    mutate(cluster = factor(cluster)) %>% 
+    select(SNP,cluster,UKBB_RAF,ALL_RAF,AFR_RAF,EAS_RAF,AMR_RAF,SAS_RAF,EUR_RAF) %>% 
+    gather(key = 'pop', value ='raf',-SNP,-cluster) %>%
+    mutate(pop = factor(gsub('_RAF','',pop),levels = c('UKBB','ALL','AFR','AMR','EAS','EUR','SAS'))) %>%
+    na.omit()
+  if(nrow(xx)>0){
+    xx %>%
+      group_by(cluster,pop) %>% 
+      summarise(RAF_mean = mean(raf,na.rm=T),
+                RAF_min = min(raf,na.rm=T),
+                RAF_max = max(raf,na.rm=T),
+                RAF_sd = sd(raf,na.rm=T),
+                RAF_q1 = quantile(raf,probs = 0.25, na.rm=T),
+                RAF_q3 = quantile(raf,probs = 0.75, na.rm=T),
+                RAF_median = quantile(raf,probs = 0.75, na.rm=T)) %>%
+      mutate(LDblock=x['block'])
+  } else {NULL}
+}) 
+ld_cl2cl3_anta=ld_cl2cl3_anta[!sapply(ld_cl2cl3_anta,is.null)]
+ld_cl2cl3_anta = reshape2::melt(ld_cl2cl3_anta,id.vars = colnames(ld_cl2cl3_anta[[1]])) 
+ukkb_ld_anta= ld_cl2cl3_anta %>% 
+  mutate(cluster=as.factor(cluster)) %>%
+  filter(pop == 'UKBB') %>%
+  ggplot(aes(y = RAF_median, x= cluster, fill = cluster)) +
+  geom_violin()+
+  geom_sina(size=1,alpha=1)+
+  geom_boxplot(width=0.1,fill='white') +
+  scale_fill_manual(values = ageonsetcolors) +
+  stat_summary(fun.y = 'median', aes(label = round(..y..,2)), geom = "label",fill='white')  +
+  guides(fill = F) +
+  xlab('Age of onset cluster') + ylab('Risk Allele Frequency')+
+  ylim(0,1) +
+  stat_compare_means(label = 'p.format',label.y=0.01,label.x = 0.5,hjust=0)
+
+onekg_ld_anta = ld_cl2cl3_anta %>% 
+  mutate(cluster=as.factor(cluster)) %>%
+  filter(pop != 'UKBB') %>%
+  ggplot(aes(y = RAF_median, x= cluster, fill = cluster)) +
+  facet_wrap(~pop) +
+  geom_violin()+
+  geom_sina(size=1,alpha=1)+
+  geom_boxplot(width=0.1,fill='white') +
+  scale_fill_manual(values = ageonsetcolors) +
+  stat_summary(fun.y = 'median', aes(label = round(..y..,2)), geom = "label",fill='white')  +
+  guides(fill = F) +
+  xlab('Age of onset cluster') + ylab('Risk Allele Frequency')+
+  ylim(0,1) +
+  stat_compare_means(label = 'p.format',label.y=0.01,label.x = 0.5,hjust=0)
+
+all_anta = ggarrange(ukkb_ld_anta+ggtitle('UK Biobank'), onekg_ld_anta, labels = 'auto', nrow=1,ncol=2, widths = c(1,2))
+
+ggsave('./results/evoAnalysis/RAF_all_antagonist_ldblock_cl23.pdf',all_anta, units = 'cm', width = 24, height = 12, useDingbats = F)
+ggsave('./results/evoAnalysis/RAF_all_antagonist_ldblock_cl23.png',all_anta, units = 'cm', width = 24, height = 12)
+
