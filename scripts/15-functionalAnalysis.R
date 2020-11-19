@@ -2,19 +2,23 @@ source('./scripts/00-setup.R')
 disIDs = gsub('a','',list.files('./results/caseControl/'))
 disCoding <- setNames(disCoding$meaning,disCoding$node_id)
 
-proxyGenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_proxyGenes.rds',sep=''),function(x){
-  x=readRDS(x)
-  x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
-  setdiff(unique(x$proxy_ensembl),c('',' ',NA))
-})
-names(proxyGenes)=disIDs
+# proxyGenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_proxyGenes.rds',sep=''),function(x){
+#   x=readRDS(x)
+#   x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
+#   setdiff(unique(x$proxy_ensembl),c('',' ',NA))
+# })
+# names(proxyGenes)=disIDs
 
-eqtlGenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_eQTLGenes.rds',sep=''),function(x){
-  x=readRDS(x)
-  x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
-  setdiff(unique(x$eQTL_ensembl),c('',' ', NA))
-})
-names(eqtlGenes)=disIDs
+proxyGenes = readRDS('./data/processed/genomicAnalysis/signif_proxygenes_ensembl.rds')
+
+# eqtlGenes <- sapply(paste('./data/processed/caseControl/a',disIDs,'/signif_gwasRes_eQTLGenes.rds',sep=''),function(x){
+#   x=readRDS(x)
+#   x=filter(x, !(CHR==mhcchr & BP>= mhcstart & BP<=mhcend))
+#   setdiff(unique(x$eQTL_ensembl),c('',' ', NA))
+# })
+# names(eqtlGenes)=disIDs
+
+eqtlGenes = readRDS('./data/processed/genomicAnalysis/signif_eQTLgenes_ensembl.rds')
 
 proxyGenes <- reshape2::melt(proxyGenes) %>%
   set_names(c('geneid','disID')) %>%
@@ -53,7 +57,7 @@ dissum = signifGenes %>%
   ungroup()
 
 genedat = full_join(dissum,full_join(ageonsetsum,discatsum)) %>%
-  select(geneid, numdiseases,numdiscat,numagecluster,ageonsetclusters, everything()) 
+  dplyr::select(geneid, numdiseases,numdiscat,numagecluster,ageonsetclusters, everything()) 
 
 rm(ageonsetsum,discatsum,dissum)
 
@@ -219,6 +223,16 @@ d12 = newdf %>%
   filter(cluster=='1-2') %>%
   mutate(termname = ifelse(nchar(term)>40,paste(substr(term,1,37),'...',sep=''),term)) %>%
   unique()
+d13 = newdf %>%
+  filter(rep==category) %>% 
+  filter(cluster=='1-3') %>%
+  mutate(termname = ifelse(nchar(term)>40,paste(substr(term,1,37),'...',sep=''),term)) %>%
+  unique()
+d23 = newdf %>%
+  filter(rep==category) %>% 
+  filter(cluster=='2-3') %>%
+  mutate(termname = ifelse(nchar(term)>40,paste(substr(term,1,37),'...',sep=''),term)) %>%
+  unique()
 d123 = newdf %>%
   filter(rep==category) %>% 
   filter(cluster=='1-2-3') %>%
@@ -261,6 +275,15 @@ p12 = ggplot(d12, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=typ
   ggtitle('Cluster 1 & 2')+
   ylim(0,7.1)+
   theme_pubr(base_size = 6)
+p23 = ggplot(d23, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=type)) +
+  geom_bar(stat='identity',position=position_dodge2(preserve = "single",padding = 0)) +
+  coord_flip() +
+  ylab('Log2 Enrichment Score') +
+  xlab(NULL) +
+  scale_fill_brewer(type='qual',palette=3) +
+  ggtitle('Cluster 2 & 3')+
+  ylim(0,7.1)+
+  theme_pubr(base_size = 6)
 p123 = ggplot(d123, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=type)) +
   geom_bar(stat='identity',position=position_dodge2(preserve = "single",padding = 0)) +
   coord_flip() +
@@ -272,12 +295,12 @@ p123 = ggplot(d123, aes(x = reorder(termname,log2enrich), y = log2enrich, fill=t
   theme_pubr(base_size = 6)
 
 px1 = ggarrange(p1,p2,ncol=1,nrow=2, heights = c(4,1),align='v',common.legend = T, legend='none')
-px2 = p3
+px2 = ggarrange(p3, p23, ncol = 1, nrow=2, heights = c(25,9), align = 'v', common.legend = T, legend = 'none')
 px12 = ggarrange(px1,px2,ncol=2,nrow=1,common.legend = T,legend='none')
-px3=ggarrange(p12,p123,ncol=1,nrow=2,align='v',heights = c(1.2,1),legend='none')
+px3=ggarrange(p12, p123,ncol=1,nrow=2,align='v',heights = c(16,15),legend='none')
 pxfin=ggarrange(px12,px3,ncol=2,nrow=1,widths = c(2,1))
-ggsave('./results/functionalAnalysis/gores_final.pdf',units='cm',width=20,height = 10,useDingbats = F)
-ggsave('./results/functionalAnalysis/gores_final.png',units='cm',width=20,height = 10)
+ggsave('./results/functionalAnalysis/gores_final.pdf',units='cm',width=20,height = 14,useDingbats = F)
+ggsave('./results/functionalAnalysis/gores_final.png',units='cm',width=20,height = 14)
 
 newdf %>%
   dplyr::select(1,8,2,3,10,4,15,21,22,23) %>% 
@@ -307,3 +330,29 @@ GOres2 %>%
               'p-value','BY Corrected p-value','Enrichment Score','Log 2 Enrichment Score','Representative GO Category')) %>%
   write_tsv('./results/functionalAnalysis/gores_all.tsv')
 
+
+#####
+
+genegrs = readRDS('./data/processed/clustergenes_ensembl.rds')
+
+GOres = read_csv('./results/functionalAnalysis/gores_all.csv', col_types = 'cccccddddc')
+
+GOres %>%
+  filter(grepl('epi',`GO Term`)) %>%
+  filter(`BY Corrected p-value` <= 0.1) %>%
+  View()
+
+martx = biomaRt::useMart('ensembl','hsapiens_gene_ensembl')
+biomaRt::listFilters(martx) %>% View()
+methylgenes = biomaRt::getBM(c('ensembl_gene_id','hgnc_symbol'),'go','GO:0006306',martx) %>%
+  mutate(methyl = T)
+
+xx = reshape2::melt(setNames(genegrs$genelist,genegrs$name)) %>%
+  set_names(c('ensembl_gene_id','type')) %>%
+  full_join(methylgenes)
+
+####### Explanation
+# Among the DNA methylation genes compiled under "GO:0006306" category (n=29), there are 4 associated with multidisease or multicategory genes. 'GNAS' and 'HELLS' are Multidisease cluster 1 genes, and 'GATAD2A' is a Multicategory cluster 1 gene. Disruption in the ortholog of 'HELLS' gene in mouse ('Hells') was found associated with ageing: 
+# Gene disruption results in growth retardation and signs of premature ageing such as graying and loss of hair, reduced skin fat deposition, osteoporosis, kyphosis, cachexia, and premature death. (from GenAge)
+# Sun et al. (2004) "Growth retardation and premature aging phenotypes in mice with disruption of the SNF2-like gene, PASG." Genes Dev. 18(9):1035-1046
+# The fourth gene, 'CTCF', is a multidisease cluster 2 gene with no known assoication with ageing. There is no other overlap. None of these overlaps were significant after multiple testing correction in our functional analysis.
