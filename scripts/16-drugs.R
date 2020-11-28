@@ -12,18 +12,19 @@ allgenes = unique(c(eqtlgenes,proxygenes))
 rm(eqtlgenes,proxygenes)
 ####
 
-interactions <- read_tsv("http://www.dgidb.org/data/interactions.tsv") %>% 
-  rename(ChEMBLID = drug_chembl_id) %>% dplyr::select(gene_name, 
-                                                      ChEMBLID) %>% unique() %>% na.omit()
+interactions <- read_tsv("https://www.dgidb.org/data/monthly_tsvs/2020-Oct/interactions.tsv") %>% 
+  rename(ChEMBLID = drug_concept_id) %>% 
+  dplyr::select(gene_name, ChEMBLID) %>% 
+  mutate(ChEMBLID = gsub('chembl:','',ChEMBLID)) %>% unique() %>% na.omit()
 drug_target_list = lapply(unique(interactions$ChEMBLID),function(drug){
   unique(filter(interactions,ChEMBLID==drug)$gene_name)
 })
 length(drug_target_list)
-#6277
+#10723
 names(drug_target_list)=unique(interactions$ChEMBLID)
 genesx = unique(intersect(allgenes,interactions$gene_name))
 length(genesx)
-# 2385
+# 3054
 genegr$cl12combined_all=unique(c(genegr$cl1_all,genegr$`cl1-2_all`,genegr$cl2_all))
 genegr$cl12combined_multicat =unique(c(genegr$cl1_multicat,genegr$`cl1-2_multicat`,genegr$cl2_multicat))
 drugres = lapply(drug_target_list,function(drugx){
@@ -89,6 +90,8 @@ drugxx = drugres %>%
 
 DA_drugs_incSyn_CHEMBLlist %>%
   filter(ChEMBLID %in% drugxx$ChEMBLID)
+# CID drugName     ChEMBLID
+# 1 5281804 Prunetin CHEMBL491174
 chembl2name <- function(nm){
   library(RCurl)
   library(jsonlite)
@@ -132,6 +135,7 @@ V(myg)$type = 'drug'
 V(myg)$type[V(myg)$name %in% interactions$gene_name] = 'gene'
 V(myg)$color=V(myg)$type
 V(myg)$color[V(myg)$name %in% genegr$cl1_multicat] = 'cl1'
+V(myg)$color[V(myg)$name %in% genegr$cl2_multicat] = 'cl2'
 V(myg)$color[V(myg)$name %in% genegr$`cl1-2_multicat`] = 'cl1-2'
 labx= V(myg)$name
 # labx[V(myg)$type=='drug']=''
@@ -139,12 +143,12 @@ labx[!labx%in%allgenes]=tolower(labx[!labx%in%allgenes])
 library(GGally)
 drugnet = ggnet2(myg,size=0,edge.color='gray70')+
   geom_point(shape = c(18,19)[factor(V(myg)$type)], 
-             size = c(4,4,3,2)[factor(V(myg)$color)],
-             color = setNames(c(ageonsetcolors[c('1','1-2')],'gray70','dodgerblue'),c('cl1','cl1-2','gene','drug'))[V(myg)$color]) +
+             size = c(4,4,4,3,2)[factor(V(myg)$color)],
+             color = setNames(c(ageonsetcolors[c('1','2','1-2')],'gray70','dodgerblue'),c('cl1','cl2','cl1-2','gene','drug'))[V(myg)$color]) +
   geom_text_repel(label=labx,
                   box.padding = 0.01,
                   size=6/pntnorm,
-                  color = c('gray5','gray5','midnightblue',NA)[factor(V(myg)$color)]) +
+                  color = c('gray5','gray5','gray5','midnightblue',NA)[factor(V(myg)$color)]) +
   theme_void()
 
 ggsave('./results/drug/drugnet.pdf', drugnet,width = 16,height = 12,units = 'cm',useDingbats=F)
@@ -181,7 +185,19 @@ unique((xx %>%
   # summarise(n=length(unique(ChEMBLID)),
   #           Drugs = paste(sort(unique(`drug`)),collapse=', ')) %>%
   # View()
-
+# [1] "diabetes mellitus"                                                    
+# [2] "type II diabetes mellitus"                                            
+# [3] "Recurrent thrombophlebitis"                                           
+# [4] "type II diabetes mellitus|MODY"                                       
+# [5] "type I diabetes mellitus"                                             
+# [6] "rheumatic disease"                                                    
+# [7] "viral disease"                                                        
+# [8] "osteoporosis"                                                         
+# [9] "bone disease"                                                         
+# [10] "prostate carcinoma|prostate adenocarcinoma|metastatic prostate cancer"
+# [11] "osteitis deformans"                                                   
+# [12] "multiple myeloma"                                                     
+# [13] "postmenopausal osteoporosis"
 ##### other drugs with the same indications
 indicationlist = unique((xx %>%
                            ungroup() %>%
@@ -199,7 +215,8 @@ inddat = drugind %>%
   select(ChEMBLID, `EFO Terms`, gene_name) %>%
   filter(gene_name %in% allgenes) %>%
   mutate(cl12 = gene_name %in% genegr$cl12combined_multicat) %>%
-  mutate(hit_drugs = ChEMBLID %in% unique(drugxx$ChEMBLID)) 
+  mutate(hit_drugs = ChEMBLID %in% unique(drugxx$ChEMBLID)) %>%
+  mutate(`EFO Terms` = ifelse(nchar(`EFO Terms`)>40,paste(substr(`EFO Terms`,1,37),'...',sep=''),`EFO Terms`))
 
 ind_p1 = select(inddat, ChEMBLID, `EFO Terms`, hit_drugs) %>%
   unique() %>%
@@ -287,7 +304,7 @@ xx %>%
 select(`Drug Name`,`EFO Terms`, `Max Phase for Indication`) %>%
 na.omit() %>%
 set_names(c('drug','indications','phase')) %>%
-  head()
+  # head()
 filter(phase >=3) %>%
 group_by(indications) %>%
 summarise(n = length(unique(drug))) %>%
