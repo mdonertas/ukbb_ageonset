@@ -304,3 +304,122 @@ for(dircut in c(0,0.1,0.25,0.4)){
 # 5 p40_50 2 0.0017116107 Multicategory
 # 6 p30_40 3 0.0075343934 Multicategory
 # 7 p40_50 3 0.0007439967 Multicategory
+
+
+#####
+
+dircut = 1
+
+xx = eqtl_summary %>%
+  ungroup() %>%
+  filter(!is.na(expression)) %>%
+  filter(snp_direction >= dircut) %>%
+  dplyr::select(type,aooclusters, eQTL_tissue,eQTL_ensembl, snp_direction, sample_id, expression, age) %>%
+  group_by(type,aooclusters, eQTL_tissue,eQTL_ensembl,age) %>%
+  summarise(exp = mean(expression)) %>%
+  spread(age,exp) %>% 
+  mutate(`30` = `30-39`-`20-29`,
+         `40` = `40-49`-`30-39`,
+         `50` = `50-59`-`40-49`,
+         `60` = `60-69`-`50-59`,
+         `70` = `70-79`-`60-69`) %>%
+  dplyr::select(type,aooclusters,eQTL_tissue,eQTL_ensembl, `30`,`40`,`50`,`60`,`70`) %>%
+  gather('age','diff',-type,-aooclusters,-eQTL_tissue,-eQTL_ensembl) %>%
+  ungroup() 
+
+cl1_Dircut1 = unique((xx %>%
+                filter(type == 'Multicategory' & aooclusters == 1))$eQTL_ensembl)
+bg = unique(xx$eQTL_ensembl)
+library(goseq)
+allgo=getgo(bg,"hg19","ensGene")
+allgo = allgo[!sapply(allgo,is.null)]
+allgo = reshape2::melt(allgo) %>%
+  set_names(c('category','gene'))
+gnsl = setNames(rep(0,length(bg)),bg)
+gnsl[names(gnsl)%in%cl1_Dircut1]=1
+pwf=nullp(gnsl,"hg19","ensGene")
+cl1 = goseq(pwf,"hg19","ensGene")
+cl1 = cl1 %>%
+  mutate(numGenes = length(cl1_Dircut1)) %>%
+  mutate(a = numDEInCat) %>%
+  mutate(b = numGenes - a) %>% 
+  mutate(c = numInCat-a) %>%
+  mutate(d = length(bg) -a - b - c) %>%
+  mutate(enrichScore = (a/b)/(c/d)) %>%
+  mutate(log2enrich = log2(enrichScore)) %>%
+  mutate(aoo = 1)
+
+dircut = 0
+
+xx = eqtl_summary %>%
+  ungroup() %>%
+  filter(!is.na(expression)) %>%
+  filter(snp_direction >= dircut) %>%
+  dplyr::select(type,aooclusters, eQTL_tissue,eQTL_ensembl, snp_direction, sample_id, expression, age) %>%
+  group_by(type,aooclusters, eQTL_tissue,eQTL_ensembl,age) %>%
+  summarise(exp = mean(expression)) %>%
+  spread(age,exp) %>% 
+  mutate(`30` = `30-39`-`20-29`,
+         `40` = `40-49`-`30-39`,
+         `50` = `50-59`-`40-49`,
+         `60` = `60-69`-`50-59`,
+         `70` = `70-79`-`60-69`) %>%
+  dplyr::select(type,aooclusters,eQTL_tissue,eQTL_ensembl, `30`,`40`,`50`,`60`,`70`) %>%
+  gather('age','diff',-type,-aooclusters,-eQTL_tissue,-eQTL_ensembl) %>%
+  ungroup() 
+
+cl2_Dircut0 = unique((xx %>%
+                       filter(type == 'Multicategory' & aooclusters == 2))$eQTL_ensembl)
+cl3_Dircut0 = unique((xx %>%
+                       filter(type == 'Multicategory' & aooclusters == 3))$eQTL_ensembl)
+bg = unique(xx$eQTL_ensembl)
+
+allgo=getgo(bg,"hg19","ensGene")
+allgo = allgo[!sapply(allgo,is.null)]
+allgo = reshape2::melt(allgo) %>%
+  set_names(c('category','gene'))
+gnsl = setNames(rep(0,length(bg)),bg)
+gnsl[names(gnsl)%in%cl2_Dircut0]=1
+pwf=nullp(gnsl,"hg19","ensGene")
+cl2 = goseq(pwf,"hg19","ensGene")
+cl2 = cl2 %>%
+  mutate(numGenes = length(cl2_Dircut0)) %>%
+  mutate(a = numDEInCat) %>%
+  mutate(b = numGenes - a) %>% 
+  mutate(c = numInCat-a) %>%
+  mutate(d = length(bg) -a - b - c) %>%
+  mutate(enrichScore = (a/b)/(c/d)) %>%
+  mutate(log2enrich = log2(enrichScore)) %>%
+  mutate(aoo = 2)
+
+gnsl = setNames(rep(0,length(bg)),bg)
+gnsl[names(gnsl)%in%cl3_Dircut0]=1
+pwf=nullp(gnsl,"hg19","ensGene")
+cl3 = goseq(pwf,"hg19","ensGene")
+cl3 = cl3 %>%
+  mutate(numGenes = length(cl3_Dircut0)) %>%
+  mutate(a = numDEInCat) %>%
+  mutate(b = numGenes - a) %>% 
+  mutate(c = numInCat-a) %>%
+  mutate(d = length(bg) -a - b - c) %>%
+  mutate(enrichScore = (a/b)/(c/d)) %>%
+  mutate(log2enrich = log2(enrichScore)) %>%
+  mutate(aoo = 3)
+
+rbind(cl1,cl2,cl3) %>%
+  filter(numInCat>=10 & numInCat <=500 & ontology == 'BP')%>%
+  mutate(fdr = p.adjust(over_represented_pvalue, method = 'fdr'))  %>%
+  filter(over_represented_pvalue<=0.01) %>% 
+  # mutate(term = ifelse(nchar(term)>40, substr(term,1,37),term)) %>%
+  dplyr::select(category,term,aoo,log2enrich,over_represented_pvalue,fdr) %>%
+  set_names(c('GO Category','GO Term','Age-of-onset cluster', 'Log2 Enrichment Score','p-value','FDR')) %>%
+  write_tsv('./results/expression/gocat.tsv')
+
+rbind(cl1,cl2,cl3) %>%
+  filter(numInCat>=10 & numInCat <=500 & ontology == 'BP')%>%
+  mutate(fdr = p.adjust(over_represented_pvalue, method = 'fdr'))  %>%
+  filter(over_represented_pvalue<=0.01) %>% 
+  # mutate(term = ifelse(nchar(term)>40, substr(term,1,37),term)) %>%
+  dplyr::select(category,term,aoo,log2enrich,over_represented_pvalue,fdr) %>%
+  set_names(c('GO Category','GO Term','Age-of-onset cluster', 'Log2 Enrichment Score','p-value','FDR')) %>%
+  write_csv('./results/expression/gocat.csv')
