@@ -356,3 +356,14 @@ xx = reshape2::melt(setNames(genegrs$genelist,genegrs$name)) %>%
 # Gene disruption results in growth retardation and signs of premature ageing such as graying and loss of hair, reduced skin fat deposition, osteoporosis, kyphosis, cachexia, and premature death. (from GenAge)
 # Sun et al. (2004) "Growth retardation and premature aging phenotypes in mice with disruption of the SNF2-like gene, PASG." Genes Dev. 18(9):1035-1046
 # The fourth gene, 'CTCF', is a multidisease cluster 2 gene with no known assoication with ageing. There is no other overlap. None of these overlaps were significant after multiple testing correction in our functional analysis.
+
+
+methylgenes = biomaRt::getBM(c('ensembl_gene_id','hgnc_symbol'),'go','GO:0080111',martx) %>%
+  mutate(methyl = T)
+
+xx = reshape2::melt(setNames(genegrs$genelist,genegrs$name)) %>%
+  set_names(c('ensembl_gene_id','type')) %>%
+  full_join(methylgenes) 
+filter(xx,methyl)
+####### Explanation
+# Among the DNA demethylation genes compiled under "GO:0080111" category (n=20), there was 0 overlap with the cluster specific genes. 
